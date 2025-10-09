@@ -1,2 +1,4 @@
 source/
 optical_rectification/scrap.py
+optical_rectification/__pycache__/
+unit_test/__pycache__/
