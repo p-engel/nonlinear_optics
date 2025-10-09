@@ -12,7 +12,7 @@ class Index():
 	Refractive index n(ω) and absorption α(ω) 
 	with Lorentz model.
 	"""
-	def __init__(omega, omega0, gamma, osc_strength, n_inf, k):
+	def __init__(self, omega, omega0, gamma, osc_strength, n_inf, k):
 		"""
 		Parameters
 		----------
@@ -33,7 +33,7 @@ class Index():
 		self.n_inf = n_inf; self.k = k
 		self.n_osc = len(omega0)
 
-	def lorentz(w0, gam0):
+	def lorentz(self, w0, gam0):
 		"""
 		Parameters
 		----------
@@ -54,9 +54,9 @@ class Index():
 			real refractive index n(ω) [1]
 		"""
 		n = np.full_like(self.w, self.n_inf, dtype=float)
-		for i in self.n_osc:
+		for i in range(self.n_osc):
 			real_part = self.a[i] * (self.w0[i]**2 - self.w**2)
-			n += real_part * lorentz(self.w0[i], self.gamma[i])
+			n += real_part * self.lorentz(self.w0[i], self.gamma[i])
 
 		return n
 
@@ -67,9 +67,9 @@ class Index():
 		alpha : np 1d array
 			imaginary refractive index α(ω) [?]
 		"""
-		alpha = np.zeros_like(omega)
-		for i in self.n_osc:
+		alpha = np.zeros_like(self.w)
+		for i in range(self.n_osc):
 			imag_part = self.k * self.a[i] * (2*self.gamma[i]*(self.w**2))
-			alpha += imag_part * lorentz(self.w0[i], self.gamma[i])
+			alpha += imag_part * self.lorentz(self.w0[i], self.gamma[i])
 
 		return alpha
