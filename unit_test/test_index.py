@@ -1,12 +1,9 @@
 import numpy as np
 from optical_rectification import definitions, par
 
-## test dispersion curve
-
 def test_index():
     """
-    calculate avergae occupation number and second-order correlation
-    nonHermitian Jaynes-Cummings Hamiltonian
+    test dispersion curve
     """
     k = par.k
     n_inf = par.param[0]
