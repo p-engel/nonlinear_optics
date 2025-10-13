@@ -41,9 +41,12 @@ class Index():
 		Return
 		------
 		f(ω) : np 1d array [1/(rad/s)^4]
-			un-normalized Lorentz PDF
+			Lorentz PDF
 		"""
-		f = 1 / (w0**2 - self.w**2)**2 + 4*(gam0**2)*(self.w**2)
+		# f = 1 / (w0**2 - self.w**2)**2 + 4*(gam0**2)*(self.w**2)
+		# normalized
+		f = gam0*(self.w**2) \
+			/ ( (w0**2 - self.w**2)**2 + (gam0**2)*(self.w**2) )
 		return f
 
 	def n(self):
@@ -55,8 +58,9 @@ class Index():
 		"""
 		n = np.full_like(self.w, self.n_inf, dtype=float)
 		for i in range(self.n_osc):
-			real_part = self.a[i] * (self.w0[i]**2 - self.w**2)
-			n += real_part * self.lorentz(self.w0[i], self.gamma[i])
+			real_part = self.a[i] * \
+				( self.w0[i]**2 - self.w**2 ) / ( gamma[i]*(self.w**2) )
+			n += real_part*self.lorentz(self.w0[i], self.gamma[i])
 
 		return n
 
@@ -69,7 +73,7 @@ class Index():
 		"""
 		alpha = np.zeros_like(self.w)
 		for i in range(self.n_osc):
-			imag_part = self.k * self.a[i] * (2*self.gamma[i]*(self.w**2))
-			alpha += imag_part * self.lorentz(self.w0[i], self.gamma[i])
+			imag_part = self.k*self.a[i]
+			alpha += imag_part*self.lorentz(self.w0[i], self.gamma[i])
 
 		return alpha
