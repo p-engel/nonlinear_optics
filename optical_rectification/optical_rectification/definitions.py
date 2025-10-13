@@ -59,7 +59,7 @@ class Index():
 		n = np.full_like(self.w, self.n_inf, dtype=float)
 		for i in range(self.n_osc):
 			real_part = self.a[i] * \
-				( self.w0[i]**2 - self.w**2 ) / ( gamma[i]*(self.w**2) )
+				( self.w0[i]**2 - self.w**2 ) / ( self.gamma[i]*(self.w**2) )
 			n += real_part*self.lorentz(self.w0[i], self.gamma[i])
 
 		return n
