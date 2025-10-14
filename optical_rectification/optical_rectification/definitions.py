@@ -26,7 +26,7 @@ class Index():
 		n_inf : float
 			real index value at infinity [1] 
 		k : float
-			global absorption scaling factor [?]   
+			global absorption scaling factor [1/(rad/s)•1/mm]   
 		"""
 		self.w = omega; self.w0 = omega0; self.gamma = gamma
 		self.a = osc_strength
@@ -69,7 +69,7 @@ class Index():
 		Return
 		------
 		alpha : np 1d array
-			imaginary refractive index α(ω) [?]
+			imaginary refractive index α(ω) [1/mm]
 		"""
 		alpha = np.zeros_like(self.w)
 		for i in range(self.n_osc):
