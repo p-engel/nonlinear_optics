@@ -1,4 +1,6 @@
 import numpy as np
+import os
+import pandas as pd
 """
 OR Simulation with consistent scaling
 -------------------------------------------
@@ -7,6 +9,10 @@ OR Simulation with consistent scaling
 - Propagation with χ² and 3PA
 - Uses SciPy Runge-Kutta (solve_ivp)
 """
+# constants
+c = 299792458.0  # speed of light [m/s]
+
+
 class Index():
 	"""
 	Refractive index n(ω) and absorption α(ω) 
@@ -78,19 +84,22 @@ class Index():
 
 		return alpha
 
+
 def opt_spec():
 	"""
 	Read optical absorption
 	Return 
 	spectrum : numpy array (N, 2)
 	"""
-	c = 299792458.0  # speed of light [m/s]
-	fname = r'./optical_rectification/source/DSTMS_Optabsorption_cm-1.csv'
+	# filepath
+	base_dir = os.path.dirname(__file__)  # directory of this Python file
+	fname = os.path.join(base_dir, '..', 'source', 'DSTMS_Optabsorption_cm-1.csv')
+	fname = os.path.abspath(fname)
+	# reading
 	df = pd.read_csv(fname, header=None, names=['wl', 'alpha'])
 	wavelen = df['wl'].values * 1e-9  # [m]
 	alpha = df['alpha'].values
 	spectrum = np.array(
 				[[c/lam, alpha[w]] for w, lam in enumerate(wavelen)]
 				)
-
-	return spectrum[spectrum[0,:].argsort()[::-1]]  # sorted coordinate
+	return spectrum[spectrum[:,0].argsort()]  # sorted coordinate

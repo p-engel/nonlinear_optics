@@ -8,9 +8,9 @@ def test_optspec():
     check measurred absorption spectrum in optical regime
     """
     spec = definitions.opt_spec();
-    w = spec[0,:]
+    w = spec[:,0]
     try:
-        cond1 = spec.shape() == (len(w), 2);
+        cond1 = spec.shape == (len(w), 2);
         cond2 = w[5] <= w[6];
         assert cond1, "the spectrum should have to columns for \
                 frequency and intensity."
@@ -28,9 +28,9 @@ def test_optspec():
 # plot optical absorption spectrum of DSTMS
 plt.figure(figsize=(12,5))
 spec = test_optspec()
-plt.plot(spec[0,:], spec[1,:])
+plt.plot(spec[:,0]*1e-12, spec[:,1])
 plt.title('Optical Absorption of DSTMS')
-plt.xlabel(r'$\omega$ (Hz)')
+plt.xlabel(r'$\omega$ (THz)')
 plt.ylabel(r'$\alpha(\omega)$')
 plt.grid(True)
 plt.show()
