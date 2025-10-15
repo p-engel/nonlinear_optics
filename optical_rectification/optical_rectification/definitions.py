@@ -77,3 +77,20 @@ class Index():
 			alpha += imag_part*self.lorentz(self.w0[i], self.gamma[i])
 
 		return alpha
+
+def opt_spec():
+	"""
+	Read optical absorption
+	Return 
+	spectrum : numpy array (N, 2)
+	"""
+	c = 299792458.0  # speed of light [m/s]
+	fname = r'./optical_rectification/source/DSTMS_Optabsorption_cm-1.csv'
+	df = pd.read_csv(fname, header=None, names=['wl', 'alpha'])
+	wavelen = df['wl'].values * 1e-9  # [m]
+	alpha = df['alpha'].values
+	spectrum = np.array(
+				[[c/lam, alpha[w]] for w, lam in enumerate(wavelen)]
+				)
+
+	return spectrum[spectrum[0,:].argsort()[::-1]]  # sorted coordinate
