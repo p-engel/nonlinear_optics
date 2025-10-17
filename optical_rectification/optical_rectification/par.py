@@ -1,4 +1,5 @@
 # parameter file
+import os
 
 ## parameters for eight Lorentz oscillators
 ## [n_inf, [w1, gam1, a1], [w2, gam2, a2],...[w8, gam8, a8]]
@@ -28,3 +29,9 @@ param = [
  		]
 
 k = (6.28318531e12)*(5.78013078e-09)  ## global absorption scaling factor
+
+# Optical absorption spectrum from data in ref
+# filepath
+base_dir = os.path.dirname(__file__)  # directory of this Python file
+fname = os.path.join(base_dir, '..', 'data', 'DSTMS_Optabsorption_cm-1.csv')
+fname_aplha_opt = os.path.abspath(fname)
