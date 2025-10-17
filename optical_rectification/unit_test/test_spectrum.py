@@ -8,7 +8,7 @@ def test_spectrum():
     check measurred absorption spectrum in optical regime
     """
     # filename = "../../../data/DSTMS_Optabsorption_cm-1.csv"
-    filename = par.fname_aplha_opt
+    filename = par.fname_alpha_opt
     s = definitions.Spectrum(filename);
     spec = s.read_spec_file(); w = spec[:,0]
     optspec = s.opt_spec();

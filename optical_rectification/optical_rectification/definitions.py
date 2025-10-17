@@ -95,7 +95,7 @@ class Spectrum():
 		idx = (np.abs(arr - value)).argmin()
 		return idx
 
-	def read_spec_file(self):
+	def read_spec(self):
 		df = pd.read_csv(self.f, header=None, names=['wl', 'alpha'])
 		wavelen = df['wl'].values * 1e-9  # [m]
 		alpha = df['alpha'].values
@@ -112,7 +112,7 @@ class Spectrum():
 		spectrum : numpy array (N, 2)
 		"""
 		# constant
-		w_min = 150e12; w_max = 800e12;  # Hz
-		spec = self.read_spec_file(); w = spec[:,0]
+		w_min = 200e12; w_max = 800e12;  # Hz
+		spec = self.read_spec(); w = spec[:,0]
 		opt_spec = spec[self.find_ind(w, w_min):self.find_ind(w, w_max), :]
 		return opt_spec

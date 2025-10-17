@@ -34,4 +34,4 @@ k = (6.28318531e12)*(5.78013078e-09)  ## global absorption scaling factor
 # filepath
 base_dir = os.path.dirname(__file__)  # directory of this Python file
 fname = os.path.join(base_dir, '..', 'data', 'DSTMS_Optabsorption_cm-1.csv')
-fname_aplha_opt = os.path.abspath(fname)
+fname_alpha_opt = os.path.abspath(fname)
