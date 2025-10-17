@@ -49,8 +49,6 @@ class Index():
 		f(ω) : np 1d array [1/(rad/s)^4]
 			Lorentz PDF
 		"""
-		# f = 1 / (w0**2 - self.w**2)**2 + 4*(gam0**2)*(self.w**2)
-		# normalized
 		f = gam0*(self.w**2) \
 			/ ( (w0**2 - self.w**2)**2 + (gam0**2)*(self.w**2) )
 		return f
@@ -85,21 +83,36 @@ class Index():
 		return alpha
 
 
-def opt_spec():
+class Spectrum():
 	"""
-	Read optical absorption
-	Return 
-	spectrum : numpy array (N, 2)
+	read and graph spectrum
 	"""
-	# filepath
-	base_dir = os.path.dirname(__file__)  # directory of this Python file
-	fname = os.path.join(base_dir, '..', 'source', 'DSTMS_Optabsorption_cm-1.csv')
-	fname = os.path.abspath(fname)
-	# reading
-	df = pd.read_csv(fname, header=None, names=['wl', 'alpha'])
-	wavelen = df['wl'].values * 1e-9  # [m]
-	alpha = df['alpha'].values
-	spectrum = np.array(
-				[[c/lam, alpha[w]] for w, lam in enumerate(wavelen)]
-				)
-	return spectrum[spectrum[:,0].argsort()]  # sorted coordinate
+	def __init__(self, filename):
+		self.f = filename
+
+	def find_ind(self, arr, value):
+		arr = np.array(arr)
+		idx = (np.abs(arr - value)).argmin()
+		return idx
+
+	def read_spec_file(self):
+		df = pd.read_csv(self.f, header=None, names=['wl', 'alpha'])
+		wavelen = df['wl'].values * 1e-9  # [m]
+		alpha = df['alpha'].values
+		spectrum = np.array(
+					[[c/wl, alpha[k]] for k, wl in enumerate(wavelen)]
+					)
+		return spectrum[spectrum[:,0].argsort()]  # sorted spectrum
+
+	def opt_spec(self):
+		"""
+		Read absorption spectrum and return truncated spectrum
+		in the optical region: 150 - 800 THz
+		Return 
+		spectrum : numpy array (N, 2)
+		"""
+		# constant
+		w_min = 150e12; w_max = 800e12;  # Hz
+		spec = self.read_spec_file(); w = spec[:,0]
+		opt_spec = spec[self.find_ind(w, w_min):self.find_ind(w, w_max), :]
+		return opt_spec
