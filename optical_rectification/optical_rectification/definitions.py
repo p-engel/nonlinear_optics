@@ -1,6 +1,8 @@
 import numpy as np
 import os
 import pandas as pd
+
+from optical_rectification import par
 """
 OR Simulation with consistent scaling
 -------------------------------------------
@@ -11,6 +13,7 @@ OR Simulation with consistent scaling
 """
 # constants
 c = 299792458.0  # speed of light [m/s]
+p = np.array(par.param[1:])
 
 
 class Index():
@@ -18,35 +21,37 @@ class Index():
 	Refractive index n(ω) and absorption α(ω) 
 	with Lorentz model.
 	"""
-	def __init__(self, omega, omega0, gamma, osc_strength, n_inf, k):
+	def __init__(self, w, 
+			w0=None, gam0=None, a=None, n_inf=None, k=None
+			):
 		"""
 		Parameters
 		----------
-		omega : np 1d array [rad/s]
-		omega0 : np 1d array
-			resonant frequencies for n oscillators [rad/s]
-		gamma : np 1d array
-			damping rates for n oscillators [rad/s]
-		osc_strength : np 1d array
-			for n oscillators [(rad/s)^2]
+		w : np 1d array [Hz]
+		w0 : np 1d array
+			resonant frequencies for n oscillators [Hz]
+		gam0 : np 1d array
+			damping rates for n oscillators [Hz]
+		a : np 1d array
+			oscillator strenght for n oscillators [Hz^2]
 		n_inf : float
-			real index value at infinity [1] 
+			real index value at infinity [1]
 		k : float
-			global absorption scaling factor [1/(rad/s)•1/mm]   
+			global absorption scaling factor [1/(Hz*mm) ?]
 		"""
-		self.w = omega; self.w0 = omega0; self.gamma = gamma
-		self.a = osc_strength
-		self.n_inf = n_inf; self.k = k
-		self.n_osc = len(omega0)
+		self.w = w;
+		self.n_inf = par.param[0] if n_inf is None else n_inf;
+		self.w0 = p[:,0] if w0 is None else w0; 
+		self.gam0 = p[:,1] if gam0 is None else gam0;
+		self.a = p[:,2] if a is None else a;
+		self.k = par.k if k is None else k
+		self.n_osc = len(self.w0)
 
 	def lorentz(self, w0, gam0):
 		"""
-		Parameters
-		----------
-		w0, gam0 : float [rad/s]
 		Return
 		------
-		f(ω) : np 1d array [1/(rad/s)^4]
+		f(ω) : np 1d array [1/Hz^4]
 			Lorentz PDF
 		"""
 		f = gam0*(self.w**2) \
@@ -63,8 +68,8 @@ class Index():
 		n = np.full_like(self.w, self.n_inf, dtype=float)
 		for i in range(self.n_osc):
 			real_part = self.a[i] * \
-				( self.w0[i]**2 - self.w**2 ) / ( self.gamma[i]*(self.w**2) )
-			n += real_part*self.lorentz(self.w0[i], self.gamma[i])
+				( self.w0[i]**2 - self.w**2 ) / ( self.gam0[i]*(self.w**2) )
+			n += real_part*self.lorentz(self.w0[i], self.gam0[i])
 
 		return n
 
@@ -81,6 +86,24 @@ class Index():
 			alpha += imag_part*self.lorentz(self.w0[i], self.gamma[i])
 
 		return alpha
+
+
+class Dispersion():
+	"""
+	dispersion relation of field in dielectric medium
+	"""
+	def __init__(self,w,n):
+		"""
+		w - 1d array: floats
+			spectral frequency domain
+		n(w) - 1d arrya: floats
+			refractive index of medium
+		"""
+		self.w = np.array(w); self.n = np.array(n);
+
+	def phase_velocity(self): return c/self.n
+
+	def k(self): return self.w/self.phase_velocity()
 
 
 class Spectrum():
