@@ -27,7 +27,8 @@ class Index():
 		"""
 		Parameters
 		----------
-		w : np 1d array [Hz]
+		w : np 1d array 
+			free space wavelength or frequency
 		w0 : np 1d array
 			resonant frequencies for n oscillators [Hz]
 		gam0 : np 1d array
@@ -57,6 +58,12 @@ class Index():
 		f = gam0*(self.w**2) \
 			/ ( (w0**2 - self.w**2)**2 + (gam0**2)*(self.w**2) )
 		return f
+
+	def sellmeier(self, n_inf, w0, q):
+		"""
+		"""
+		epsillon = n_inf**2 + (q * w0**2)/(self.w**2 - w0**2)
+		return np.sqrt(epsillon)
 
 	def n(self):
 		"""
@@ -120,11 +127,9 @@ class Spectrum():
 
 	def read_spec(self):
 		df = pd.read_csv(self.f, header=None, names=['wl', 'alpha'])
-		wavelen = df['wl'].values * 1e-9  # [m]
+		wavelen = df['wl'].values  # [nm]
 		alpha = df['alpha'].values
-		spectrum = np.array(
-					[[c/wl, alpha[k]] for k, wl in enumerate(wavelen)]
-					)
+		spectrum = np.array([[wl, alpha[k]] for k, wl in enumerate(wavelen)])
 		return spectrum[spectrum[:,0].argsort()]  # sorted spectrum
 
 	def opt_spec(self):
@@ -135,7 +140,7 @@ class Spectrum():
 		spectrum : numpy array (N, 2)
 		"""
 		# constant
-		w_min = 200e12; w_max = 800e12;  # Hz
+		w_min = c/200; w_max = c/800;  # [nm]
 		spec = self.read_spec(); w = spec[:,0]
 		opt_spec = spec[self.find_ind(w, w_min):self.find_ind(w, w_max), :]
 		return opt_spec

@@ -34,4 +34,6 @@ k = (6.28318531e12)*(5.78013078e-09)  ## global absorption scaling factor
 # filepath
 base_dir = os.path.dirname(__file__)  # directory of this Python file
 fname = os.path.join(base_dir, '..', 'data', 'DSTMS_Optabsorption_cm-1.csv')
+fpath_n_opt = os.path.join(base_dir, '..', 'data', 'DSTMS_optical_refractve_index_nm.csv')
 fname_alpha_opt = os.path.abspath(fname)
+fname_n_opt = os.path.abspath(fpath_n_opt)
