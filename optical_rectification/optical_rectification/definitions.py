@@ -90,7 +90,7 @@ class Index():
 		alpha = np.zeros_like(self.w)
 		for i in range(self.n_osc):
 			imag_part = self.k*self.a[i]
-			alpha += imag_part*self.lorentz(self.w0[i], self.gamma[i])
+			alpha += imag_part*self.lorentz(self.w0[i], self.gam0[i])
 
 		return alpha
 
