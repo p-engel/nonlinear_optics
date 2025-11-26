@@ -179,7 +179,7 @@ class Gaussian():
         return E
 
 
-def corr_shift(E, domega, k):
+def corr(E, domega, k):
     """
     E       : complex 1D array on uniform grid E(w)
     domega  : grid spacing dw
