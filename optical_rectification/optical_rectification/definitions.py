@@ -157,7 +157,7 @@ class Gaussian():
         w0      : carrier frequency [Hz]
         E       : peak intensity in time [V/m]
         """
-        self.tau = t_fwhm / ( 2 * np.sqrt(np.log(2)) )
+        self.tau = np.sqrt(2) * t_fwhm / ( 2 * np.sqrt(np.log(2)) )
         self.delta = 2 / self.tau  # 1/e width in frequency domain
         self.w0 = w0
         self.E0 = E0
