@@ -14,7 +14,7 @@ OR Simulation with consistent scaling
 # constants
 c = 299792458.0  # speed of light [m/s]
 p = np.array(par.param[1:])
-tau_delta = 2*np.log(2) / np.pi  # time-bandwith product of Gaussian pulse
+tbp = 2*np.log(2) / np.pi  # time-bandwith product of Gaussian pulse
 
 
 class Index():
@@ -151,31 +151,29 @@ class Gaussian():
     """
     Wave package with gaussian envelop, propagating sinusoidially at carrier frequency
     """
-    def __init__(self, tau=None, w0=None, E0=None):
+    def __init__(self, t_fwhm=None, w0=None, E0=None):
         """
-        tau - FWHM in time [s]
-        w0 - carrier frequency [Hz]
-        E - peak intensity in time [V/m]
+        t_fwhm  : full width at half maximum in time [s]
+        w0      : carrier frequency [Hz]
+        E       : peak intensity in time [V/m]
         """
-        self.tau = tau
-        self.sigma_t = tau / ( 2 * np.sqrt(2*np.log(2)) )
-        self.sigma_w =  1/(4*np.pi) * 1/self.sigma_t
-        self.delta = self.sigma_w * ( 2 * np.sqrt(2*np.log(2)) ) # FWHM in frequency
+        self.tau = t_fwhm / ( 2 * np.sqrt(np.log(2)) )
+        self.delta = 2 / self.tau  # 1/e width in frequency domain
         self.w0 = w0
         self.E0 = E0
-        self.E0_w = E0 * ( np.sqrt(2*np.pi) * self.sigma_t )
+        self.E0_w = E0 * np.sqrt(2*np.pi) * self.tau
         return
     
     def field_t(self, t):
         """ t - time 1d np array [s] """
-        E = self.E0 * np.exp( -1*np.array(t)**2 / (2*self.sigma_t**2) ) \
+        E = self.E0 * np.exp( -1*np.array(t)**2 / self.tau**2 ) \
             * np.exp( -1j*self.w0*np.array(t) )
         return E
 
     def field_w(self, w):
         """ w - frequency 1d np array [Hz] """
         E = self.E0_w \
-            * np.exp( -1*(self.w0 - np.array(w))**2 / (2*self.sigma_w**2) )
+            * np.exp( -1*(self.w0 - np.array(w))**2 / self.delta**2 )
         return E
 
 
