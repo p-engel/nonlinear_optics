@@ -177,17 +177,23 @@ class Gaussian():
         return E
 
 
-def corr(E, domega, k):
+def corr(E, domega, k, up=True):
     """
     E       : complex 1D array on uniform grid E(w)
     domega  : grid spacing dw
     k       : integer shift index, Ω_k = k * dw
 
-    returns : Riemann sum ∫ E(w + Ω_k) E*(w) dw
+    returns : Riemann sum ∫ E(w + Ω_k) * conjugate[E(w)] dw,
+              else ∫ E(w - Ω_k) * E(w) dw, if down=True
     """
     if k < 0: raise ValueError("k must be non-negative")
 
     N = len(E)
     if k >= N: return 0.0
 
-    return domega * np.sum(E[k:] * np.conjugate(E[:N - k]))
+    if up:
+        # Up shift/conversion
+        return domega * np.sum(E[k:] * np.conjugate(E[:N - k]))
+    elif not up:
+        # Down shift/conversion
+        return domega * np.sum(E[:N-k] * E[k:])
