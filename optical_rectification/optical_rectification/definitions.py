@@ -14,7 +14,7 @@ OR Simulation with consistent scaling
 # constants
 c = 299792458.0  # speed of light [m/s]
 p = np.array(par.param[1:])
-tbp = 2*np.log(2) / np.pi  # time-bandwith product of Gaussian pulse
+TBP = 2*np.log(2) / np.pi  # time-bandwith product of Gaussian pulse
 
 
 class Index():
@@ -104,7 +104,7 @@ class Dispersion():
 		"""
 		w - 1d array: floats
 			spectral frequency domain
-		n(w) - 1d arrya: floats
+		n(w) - 1d array: floats
 			refractive index of medium
 		"""
 		self.w = np.array(w); self.n = np.array(n);
@@ -197,3 +197,17 @@ def corr(E, domega, k, up=True):
     elif not up:
         # Down shift/conversion
         return domega * np.sum(E[:N-k] * E[k:])
+
+def phase(w, n, ng):
+    """
+    z       : np 1d array (N,), distance [m]
+    w       : np 1d array (N,), free space frequency [Hz]
+    n(w)    : np 1d array (N,), dispersive refractive index [1]
+    ng      : double, group index at carrier frequency [rad / m]
+    -------
+    Return  : np 1d array, double [1]
+    """
+    k_0 = w / c         # free space wavenumber [1 / m]
+    K_diff = K_0 * (ng - n)
+    
+    return 2*np.pi * k_diff
