@@ -61,17 +61,17 @@ class Index():
 			/ ( (w0**2 - self.w**2)**2 + (gam0**2)*(self.w**2) )
 		return f
 
-	def sellmeier(self, n_inf=2.026, lam0=532, q=1.45):
+	def sellmeier(self, n_inf=2.026, lam0=455, q=0.17):
 		"""
 		lam        : free space wavelength [nm]
 		-----
 		Return
 		n          : refractive index, 1d array [1]
 		"""
-		lam = c / self.w * 1e9                                  # [nm]
+		lam = c_thz / self.w * 1e9                                  # [nm]
 		epsillon = (
 					n_inf**2 
-					+ (q * lam0**2) / (lam**2 - lam0**2)
+					+ (q * lam0**2) / (lam0**2 - lam**2)
 		)
 		return np.sqrt(epsillon)
 
