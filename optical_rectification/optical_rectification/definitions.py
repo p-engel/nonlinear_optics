@@ -12,7 +12,8 @@ OR Simulation with consistent scaling
 - Uses SciPy Runge-Kutta (solve_ivp)
 """
 # constants
-c = 299792458.0  # speed of light [m/s]
+c = 299792458.0             # speed of light [m * Hz]
+c_thz = c * 1e-12            # speed of light [m * THz]
 p = np.array(par.param[1:])
 TBP = 2*np.log(2) / np.pi  # time-bandwith product of Gaussian pulse
 
@@ -60,10 +61,18 @@ class Index():
 			/ ( (w0**2 - self.w**2)**2 + (gam0**2)*(self.w**2) )
 		return f
 
-	def sellmeier(self, n_inf, w0, q):
+	def sellmeier(self, n_inf=2.026, lam0=532, q=1.45):
 		"""
+		lam        : free space wavelength [nm]
+		-----
+		Return
+		n          : refractive index, 1d array [1]
 		"""
-		epsillon = n_inf**2 + (q * w0**2)/(self.w**2 - w0**2)
+		lam = c / self.w * 1e9                                  # [nm]
+		epsillon = (
+					n_inf**2 
+					+ (q * lam0**2) / (lam**2 - lam0**2)
+		)
 		return np.sqrt(epsillon)
 
 	def n(self):
@@ -98,20 +107,43 @@ class Index():
 
 class Dispersion():
 	"""
-	dispersion relation of field in dielectric medium
+	dispersion relation for optical rectification (OR)
 	"""
-	def __init__(self,w,n):
+	def __init__(self, w, n, Ω=0, n_Ω=0):
 		"""
-		w - 1d array: floats
-			spectral frequency domain
-		n(w) - 1d array: floats
-			refractive index of medium
+		w       : frequency domain of input optical pulse  [THz]
+		n(w)    : refractive index in medium
+		Ω       : terahertz domain  Ω << w  [THz]
+		n_Ω     : n(Ω)
 		"""
-		self.w = np.array(w); self.n = np.array(n);
+		self.w = np.array(w)
+		self.n = np.array(n)
+		self.Ω = np.array(Ω)
+		self.n_Ω = np.array(n_Ω)
+		self.nu = c_thz / self.n                    # phase velocity
+		self.nu_Ω = c_thz / self.n_Ω
+		self.k = self.w * (1 / self.nu)
+		self.k_Ω = self.Ω * (1 / self.nu_Ω)
 
-	def phase_velocity(self): return c/self.n
+	def nu_g(self, w0=None):
+		"""group velocity"""
+		ng = self.n + (self.w * np.gradient(self.n, self.w))
 
-	def k(self): return self.w/self.phase_velocity()
+		if w0 is not None: 
+			iw0 = np.argmin(np.abs(self.w - w0))
+			return c_thz / ng[iw0]
+		else: 
+			return c_thz / ng
+
+	def deltak(self):
+		"""
+		----
+		Return
+		∆k(Ω)   : approximate OR phase matching condition
+					Ω [1/nu_g - 1/nu_Ω] = Ω/c [ng - n_Ω]
+					where n is the refractive index
+		"""
+		return self.Ω * (1/self.nu_g() - 1/self.nu_Ω) 
 
 
 class Spectrum():
@@ -149,7 +181,8 @@ class Spectrum():
 
 class Gaussian():
     """
-    Wave package with gaussian envelop, propagating sinusoidially at carrier frequency
+    Wave package with gaussian envelop, 
+    propagating sinusoidially at carrier frequency
     """
     def __init__(self, t_fwhm=None, w0=None, E0=None):
         """
@@ -197,17 +230,3 @@ def corr(E, domega, k, up=True):
     elif not up:
         # Down shift/conversion
         return domega * np.sum(E[:N-k] * E[k:])
-
-def phase(w, n, ng):
-    """
-    z       : np 1d array (N,), distance [m]
-    w       : np 1d array (N,), free space frequency [Hz]
-    n(w)    : np 1d array (N,), dispersive refractive index [1]
-    ng      : double, group index at carrier frequency [rad / m]
-    -------
-    Return  : np 1d array, double [1]
-    """
-    k_0 = w / c         # free space wavenumber [1 / m]
-    K_diff = K_0 * (ng - n)
-    
-    return 2*np.pi * k_diff

@@ -2,37 +2,40 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from optical_rectification import definitions, par
-
-# constants
-c = definitions.c
-w = np.linspace(0.01, 2, 2**9)  # [THz]
-index = definitions.Index(w);
+from optical_rectification.definitions import Index, Dispersion, c
 
 def test_dispersion():
-    dispersion = definitions.Dispersion(w,index.n())
+    Ω = np.linspace(1e-12, 12, 2**9) # [THz]
+    w = np.linspace(115, 299, 2**9)  # [THz]
+    w0 = 203
+    dispersion = Dispersion(
+                            w, Index(w).sellmeier(), 
+                            Ω, Index(Ω).n()
+    )
     try:
-        v = dispersion.phase_velocity()
-        k = dispersion.k()
-        f = v*k
+        f = dispersion.k * dispersion.nu
         cond = np.mean(np.abs(f - w)) <= 1e-2;
+        cond1 = np.shape(dispersion.deltak()) == np.shape(Ω)
         assert cond, "the dispersion relation should satisfy \
-                w = v*k"
+                        w = k * nu"
+        assert cond, "∆k the phase matching condition \
+                        is approximated as ∆k(Ω) and thus has Dim(Ω)"
     except AssertionError as a:
         print(f"Assertion error: {a}");
 
-    return v, k
+    return w, dispersion.k
 
 # plot dispersion relation
 fig, ax1 = plt.subplots(figsize=(6.4,4.8))
-v, k = test_dispersion()
-#ax1.plot(w, k*1e9, label="DSTMS crystal")
-#ax1.plot(v*k, k*1e9, label="DSTMS crystal")
-ax1.plot(k*1e9, v*k, label="DSTMS crystal")
-ax1.plot(k*1e9, c*k, label="free space")
+w, k = test_dispersion()
+k0 = w / c
+#ax1.plot(w, k0, label="DSTMS crystal")
+#ax1.plot(f, k0, '--', label="DSTMS crystal")
+ax1.plot(w, k0, label="DSTMS crystal")
+ax1.plot(w, k, '--', label="free space")
 ax1.set_title('Dispersion')
-ax1.set_xlabel(r'$k$ ($\rm{nm}^{-1}$)')
-ax1.set_ylabel(r'$\omega$ (THz)')
+ax1.set_ylabel(r'$k(\omega)$ [$\rm{m}^{-1}$]')
+ax1.set_xlabel(r'$\omega$ [THz]')
 ax1.legend()
 plt.grid(True)
 plt.show()
