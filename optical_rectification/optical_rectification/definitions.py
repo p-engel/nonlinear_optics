@@ -71,7 +71,7 @@ class Index():
 		lam = np.sort( c_thz / self.w * 1e9 )                               # [nm]
 		epsillon = (
 					n_inf**2 
-					+ (q * lam0**2) / (lam0**2 - lam[::-1]**2)
+					+ (q * lam0**2) / (lam[::-1]**2 - lam0**2)
 		)
 		return np.sqrt(epsillon)
 
