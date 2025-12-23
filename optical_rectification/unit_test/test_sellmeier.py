@@ -14,15 +14,15 @@ ind_min = s.find_ind(spec[:,0], lam_min)
 ind_max = s.find_ind(spec[:,0], lam_max)
 xmin = spec[ind_min, 0]; xmax = spec[ind_max, 0];
 x = np.linspace(xmin, xmax, 2**9)
-x0 = 532; q = 1.45; n_inf = 2.026;
-index = definitions.Index(x)  # refractive index class
+w = definitions.c_thz / (x * 1e-9)                      # [THz]
+index = definitions.Index(x)                            # Index class
 
 def test_sellmeier():
     try:
-        n = index.sellmeier(n_inf, x0, q)
+        n = index.sellmeier(n_inf=2.026, lam0=455, q=0.17)
         cond = abs(n[0] - spec[ind_min, 1]) < 1e-1;
         assert cond, "The Sellmeier equation doesn't fit the data."
-    except AssertionError() as a:
+    except AssertionError as a:
         print(f"Assertion error: {a}");
     return n
 
