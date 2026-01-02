@@ -117,8 +117,9 @@ class Dispersion():
 		n_Ω     : n(Ω)
 		"""
 		self.w = np.array(w)
-		self.n = np.array(n)
 		self.Ω = np.array(Ω)
+		# self.w_plus = w[:, None] + self.Ω
+		self.n = np.array(n)
 		self.n_Ω = np.array(n_Ω)
 		self.nu = c_thz / self.n                    # phase velocity
 		self.nu_Ω = c_thz / self.n_Ω
@@ -135,7 +136,7 @@ class Dispersion():
 		else: 
 			return c_thz / ng
 
-	def deltak(self):
+	def deltak(self, w0=None):
 		"""
 		----
 		Return
@@ -143,7 +144,30 @@ class Dispersion():
 					Ω [1/nu_g - 1/nu_Ω] = Ω/c [ng - n_Ω]
 					where n is the refractive index
 		"""
-		return self.Ω * (1/self.nu_g() - 1/self.nu_Ω) 
+		if w0 is not None:
+			return self.Ω * (1/self.nu_g(w0=w0) - 1/self.nu_Ω)
+		else:
+			return self.Ω * (1/self.nu_g()[:, None] - 1/self.nu_Ω) 
+
+	def phase_match(self, conj=False):
+		"""
+		----
+		Return
+		∆k(w, Ω)   : exact OR phase matching condition
+					k(w + Ω) - k(w) - k(Ω)
+		"""
+		if not conj: w_Ω = self.w[:, None] + self.Ω
+		else: w_Ω = self.w[:, None] - self.Ω; self.k_Ω = -self.k_Ω
+
+		n_wΩ = np.array( [ 
+						Index(w_Ω[:, i]).n() 
+						for i in range(len(self.Ω))
+		] )
+
+		k_wΩ = w_Ω * n_wΩ.T / c_thz
+		k_diff = k_wΩ - self.k[:, None]
+		k_diff = k_diff - k_diff[:, 0][:, None]  # set k(w+Ω=0) - k(w) = 0;
+		return k_diff - self.k_Ω
 
 
 class Spectrum():
