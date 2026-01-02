@@ -118,7 +118,6 @@ class Dispersion():
 		"""
 		self.w = np.array(w)
 		self.Ω = np.array(Ω)
-		# self.w_plus = w[:, None] + self.Ω
 		self.n = np.array(n)
 		self.n_Ω = np.array(n_Ω)
 		self.nu = c_thz / self.n                    # phase velocity
