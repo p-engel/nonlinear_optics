@@ -13,9 +13,11 @@ OR Simulation with consistent scaling
 """
 # constants
 c = 299792458.0             # speed of light [m * Hz]
-c_thz = c * 1e-12            # speed of light [m * THz]
+c_thz = c * 1e-12           # speed of light [m * THz]
 p = np.array(par.param[1:])
-TBP = 2*np.log(2) / np.pi  # time-bandwith product of Gaussian pulse
+TBP = 2*np.log(2) / np.pi   # time-bandwith product of Gaussian pulse
+CHI2 = 428e-12              # [m / V]
+L = 0.4e-3                  # crystal length [m]
 
 
 class Index():
@@ -109,7 +111,7 @@ class Dispersion():
 	"""
 	dispersion relation for optical rectification (OR)
 	"""
-	def __init__(self, w, n, Ω=0, n_Ω=0):
+	def __init__(self, w, n, Ω=[0], n_Ω=[0]):
 		"""
 		w       : frequency domain of input optical pulse  [THz]
 		n(w)    : refractive index in medium
@@ -158,12 +160,12 @@ class Dispersion():
 		if not conj: w_Ω = self.w[:, None] + self.Ω
 		else: w_Ω = self.w[:, None] - self.Ω; self.k_Ω = -self.k_Ω
 
-		n_wΩ = np.array( [ 
-						Index(w_Ω[:, i]).n() 
-						for i in range(len(self.Ω))
-		] )
+		# M = len(self.Ω)
+		# n_wΩ = np.stack( [ Index(w_Ω[:, i]).n() for i in range(M) ], axis=1 )
+		n_wΩ = Index(w_Ω).n()
 
-		k_wΩ = w_Ω * n_wΩ.T / c_thz
+		# k_wΩ = w_Ω * n_wΩ.T / c_thz
+		k_wΩ = w_Ω * n_wΩ / c_thz
 		k_diff = k_wΩ - self.k[:, None]
 		k_diff = k_diff - k_diff[:, 0][:, None]  # set k(w+Ω=0) - k(w) = 0;
 		return k_diff - self.k_Ω
@@ -233,23 +235,66 @@ class Gaussian():
         return E
 
 
-def corr(E, domega, k, up=True):
+def corr(E, domega, m, up=True):
     """
     E       : complex 1D array on uniform grid E(w)
     domega  : grid spacing dw
-    k       : integer shift index, Ω_k = k * dw
+    m       : integer shift index, Ω_m = m * dw
 
-    returns : Riemann sum ∫ E(w + Ω_k) * conjugate[E(w)] dw,
-              else ∫ E(w - Ω_k) * E(w) dw, if down=True
+    returns : Riemann sum ∫ E(w + Ω_m) * conjugate[E(w)] dw,
+              else ∫ E(w - Ω_m) * E(w) dw, if down=True
     """
-    if k < 0: raise ValueError("k must be non-negative")
+    if m < 0: raise ValueError("m must be non-negative")
 
     N = len(E)
-    if k >= N: return 0.0
+    if m >= N: return 0.0
 
     if up:
         # Up shift/conversion
-        return domega * np.sum(E[k:] * np.conjugate(E[:N - k]))
+        return domega * np.sum(E[m:] * np.conjugate(E[:N - m]))
     elif not up:
         # Down shift/conversion
-        return domega * np.sum(E[:N-k] * E[k:])
+        return domega * np.sum(E[:N-m] * E[m:])
+ 
+
+def chi2_factor(freq, k):
+    """
+    Second-order nonlinear mixing
+    freq : 1d array [THz]
+    k    : 1d array, dispersion relation [1 / m]
+    """
+    return CHI2 * freq**2 / (c_thz**2 * k)              # [1 / V]
+
+
+def chi2_mixing(E, domega, m, Dk, z, up=True, E_conj=None):
+    """
+    Phase-matched correlation integral
+
+    Input
+    ------
+    E       : optical field E(ω)
+    E_conj  : conjugate field if cross correlation
+    domega  : frequency spacing
+    m       : integer shift index, Ω_m = m * Δω
+    Dk      : 2D array Δk(ω, Ω), shape (Nω, NΩ)
+    z       : propagation distance
+    up      : up/down conversion
+
+    Returns
+    -------
+    ∫ E(ω±Ω) E*(ω) exp(-i z Δk) dω
+    """
+    if m < 0: raise ValueError("m must be non-negative")
+
+    N = len(E)
+    if m >= N: return 0.0
+    if E_conj is None: E_conj = np.conj(E)
+
+    phase = np.exp(-1j * z * Dk[:N-m, m])
+
+    if up:
+        integrand = E[m:] * E_conj[:N-m] * phase
+    else:
+        integrand = E[:N-m] * np.conj(E_conj[m:]) * phase
+
+    return domega * np.sum(integrand)
