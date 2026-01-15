@@ -14,28 +14,46 @@ def test_dispersion():
     )
     try:
         f = dispersion.k * dispersion.nu
-        cond = np.mean(np.abs(f - w)) <= 1e-2;
-        cond1 = np.shape(dispersion.deltak()) == np.shape(Ω)
+        cond = np.mean( np.abs(f - w) ) <= 1e-2;
+        cond1 = np.shape( dispersion.deltak(w0=w0) ) == np.shape(Ω)
+        cond2 = np.shape( dispersion.phase_match() ) == (len(w), len(Ω))
         assert cond, "the dispersion relation should satisfy \
                         w = k * nu"
-        assert cond, "∆k the phase matching condition \
+        assert cond1, "∆k the phase matching condition \
                         is approximated as ∆k(Ω) and thus has Dim(Ω)"
+        assert cond2, "∆k the phase matching condition has Dim(w) by Dim(Ω)"
     except AssertionError as a:
         print(f"Assertion error: {a}");
 
-    return w, dispersion.k
+    return w0, w, Ω, dispersion
 
 # plot dispersion relation
 fig, ax1 = plt.subplots(figsize=(6.4,4.8))
-w, k = test_dispersion()
+w0, w, Ω, dispersion = test_dispersion()
 k0 = w / c
-#ax1.plot(w, k0, label="DSTMS crystal")
-#ax1.plot(f, k0, '--', label="DSTMS crystal")
 ax1.plot(w, k0, label="DSTMS crystal")
-ax1.plot(w, k, '--', label="free space")
+ax1.plot(w, dispersion.k, '--', label="free space")
 ax1.set_title('Dispersion')
 ax1.set_ylabel(r'$k(\omega)$ [$\rm{m}^{-1}$]')
 ax1.set_xlabel(r'$\omega$ [THz]')
 ax1.legend()
+
+# phase match
+iw0 = np.argmin(np.abs(w - w0))
+fig2, ax2 = plt.subplots(figsize=(6.4,4.8))
+ax2.plot(
+            Ω, dispersion.phase_match()[iw0, :] * 1e-3, 
+            label="exact: $k(\omega_0 + \Omega) - k(\omega_0) - k(\Omega)$"
+)
+ax2.plot(
+            Ω, dispersion.deltak()[iw0, :] * 1e-3, 
+            "--", label=r"approx: $\Omega n_g(\omega_0)/c - k(\Omega)$"
+)
+ax2.set_title('Phase matching condition DSTMS')
+ax2.set_ylabel(r'${\Delta}k$ [${\rm mm}^{-1}$]')
+ax2.set_xlabel(r'$\Omega$ [THz]')
+ax2.legend()
+
+
 plt.grid(True)
 plt.show()
