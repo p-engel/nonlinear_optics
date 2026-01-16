@@ -17,7 +17,7 @@ c_thz = c * 1e-12           # speed of light [m * THz]
 p = np.array(par.param[1:])
 TBP = 2*np.log(2) / np.pi   # time-bandwith product of Gaussian pulse
 CHI2 = 428e-12              # [m / V]
-L = 0.4e-3                  # crystal length [m]
+DEPTH = 0.4e-3              # crystal length [m]
 
 
 class Index():
@@ -99,7 +99,7 @@ class Index():
 		alpha : np 1d array
 			imaginary refractive index α(ω) [1/mm]
 		"""
-		alpha = np.zeros_like(self.w)
+		alpha = np.zeros_like(self.w, dtype=float)
 		for i in range(self.n_osc):
 			imag_part = self.k*self.a[i]
 			alpha += imag_part*self.lorentz(self.w0[i], self.gam0[i])
