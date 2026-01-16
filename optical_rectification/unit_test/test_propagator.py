@@ -15,13 +15,14 @@ def test_orpropagator():
     try:
         # --- propagation model ---
         model = ORPropagator(w, Ω_max, pulse=None)    
-        print(model.dw)
         # --- solver ---
         sol = run_simulation( model, Ew0, (0, DEPTH) )
         cond = sol.y[:, -1].shape == ((model.Nw + model.NΩ),)
         assert cond, (f"the model's state vector's degrees of freedom should ",
             "match the dimension of the fields")
-        Ewf, EΩf = model.unpack(sol.y[:, -1])
+        Ewf, EΩf = model.unpack( sol.y[:, -1] )
+        Ewf_expect = Ew0 * np.exp( -0.5 * DEPTH  )
+        assert np.allclose(Ewf_expect, Ewf, rtol=1e-2), f":/"
     except AssertionError as a:
         print(f'AssertionError: {a}')
 

@@ -1,4 +1,4 @@
-# propagation.py
+# propagator.py
 import numpy as np
 from scipy.integrate import solve_ivp
 from .definitions import c_thz, chi2_factor, chi2_mixing, Dispersion, Index

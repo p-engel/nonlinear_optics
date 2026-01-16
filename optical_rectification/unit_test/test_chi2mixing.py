@@ -9,7 +9,7 @@ def test_chi2mixing_gaussian_zero_shift():
     yields the autocorrelation at maximum
     """
     w0 = 204.22                                                             # [THz]
-    t_fwhm = 75e-15 * 1e12                                                     # [ps]
+    t_fwhm = 75e-15 * 1e12                                                  # [ps]
     E0 = 5.4315195283 * 1e8                                                 # [V/m]
     pulse = Gaussian(w0=w0, t_fwhm=t_fwhm, E0=E0)
     w = np.linspace((w0 - 3*pulse.delta), (w0 + 3*pulse.delta), 2**10)      # [THz]
