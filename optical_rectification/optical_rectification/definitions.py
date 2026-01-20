@@ -215,11 +215,11 @@ class Gaussian():
         w0      : carrier frequency [Hz]
         E       : peak intensity in time [V/m]
         """
-        self.tau = np.sqrt(2) * t_fwhm / ( 2 * np.sqrt(np.log(2)) )
-        self.delta = 2 / self.tau  # 1/e width in frequency domain
+        self.tau = np.sqrt(2) * (t_fwhm) / ( 2 * np.sqrt(np.log(2)) )
+        self.delta = 2 / self.tau  # 1 / e width in frequency domain
         self.w0 = w0
         self.E0 = E0
-        self.E0_w = E0 * np.sqrt(2*np.pi) * self.tau
+        self.E0_w = E0 * np.sqrt(np.pi) * self.tau
         return
     
     def field_t(self, t):
@@ -231,7 +231,7 @@ class Gaussian():
     def field_w(self, w):
         """ w - frequency 1d np array [Hz] """
         E = self.E0_w \
-            * np.exp( -1*(self.w0 - np.array(w))**2 / self.delta**2 )
+            * np.exp( -1*( 2*np.pi*(self.w0 - np.array(w)) )**2 / self.delta**2 )
         return E
 
 
