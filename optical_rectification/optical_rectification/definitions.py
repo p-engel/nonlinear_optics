@@ -12,12 +12,12 @@ OR Simulation with consistent scaling
 - Uses SciPy Runge-Kutta (solve_ivp)
 """
 # constants
-c = 299792458.0             # speed of light [m * Hz]
-c_thz = c * 1e-12           # speed of light [m * THz]
-p = np.array(par.param[1:])
-TBP = 2*np.log(2) / np.pi   # time-bandwith product of Gaussian pulse
-CHI2 = 428e-12              # [m / V]
-DEPTH = 0.4e-3              # crystal length [m]
+c = 299792458.0             	# speed of light [m * Hz]
+c_thz = c * 1e-12           	# speed of light [m * THz]
+p = np.array(par.param_thz[1:])
+TBP = 2*np.log(2) / np.pi   	# time-bandwith product
+CHI2 = 428e-12              	# [m / V]
+DEPTH = 0.4e-3              	# crystal length [m]
 
 
 class Index():
@@ -45,7 +45,7 @@ class Index():
 			global absorption scaling factor [1/(Hz*mm) ?]
 		"""
 		self.w = w;
-		self.n_inf = par.param[0] if n_inf is None else n_inf;
+		self.n_inf = par.param_thz[0] if n_inf is None else n_inf;
 		self.w0 = p[:,0] if w0 is None else w0; 
 		self.gam0 = p[:,1] if gam0 is None else gam0;
 		self.a = p[:,2] if a is None else a;
@@ -63,16 +63,16 @@ class Index():
 			/ ( (w0**2 - self.w**2)**2 + (gam0**2)*(self.w**2) )
 		return f
 
-	def sellmeier(self, n_inf=2.026, lam0=455, q=0.17):
+	def sellmeier(self, lam0=455, q=0.17):
 		"""
 		lam        : free space wavelength [nm]
 		-----
 		Return
 		n          : refractive index, 1d array [1]
 		"""
-		lam = np.sort( c_thz / self.w * 1e9 )                               # [nm]
+		lam = np.sort( c_thz / self.w * 1e9 )                         # [nm]
 		epsillon = (
-					n_inf**2 
+					self.n_inf**2 
 					+ (q * lam0**2) / (lam[::-1]**2 - lam0**2)
 		)
 		return np.sqrt(epsillon)
@@ -86,9 +86,11 @@ class Index():
 		"""
 		n = np.full_like(self.w, self.n_inf, dtype=float)
 		for i in range(self.n_osc):
-			real_part = self.a[i] * \
-				( self.w0[i]**2 - self.w**2 ) / ( self.gam0[i]*(self.w**2) )
-			n += real_part*self.lorentz(self.w0[i], self.gam0[i])
+			real_part = (
+				self.a[i] * ( self.w0[i]**2 - self.w**2 ) 
+				/ ( self.gam0[i]*(self.w**2) )
+			)
+			n += real_part * self.lorentz(self.w0[i], self.gam0[i])
 
 		return n
 
@@ -101,8 +103,8 @@ class Index():
 		"""
 		alpha = np.zeros_like(self.w, dtype=float)
 		for i in range(self.n_osc):
-			imag_part = self.k*self.a[i]
-			alpha += imag_part*self.lorentz(self.w0[i], self.gam0[i])
+			imag_part = self.k * self.a[i]
+			alpha += imag_part * self.lorentz(self.w0[i], self.gam0[i])
 
 		return alpha
 
@@ -161,13 +163,12 @@ class Dispersion():
 		else: w_Ω = self.w[:, None] - self.Ω; self.k_Ω = -self.k_Ω
 
 		# M = len(self.Ω)
-		# n_wΩ = np.stack( [ Index(w_Ω[:, i]).n() for i in range(M) ], axis=1 )
 		n_wΩ = Index(w_Ω).n()
 
 		# k_wΩ = w_Ω * n_wΩ.T / c_thz
 		k_wΩ = w_Ω * n_wΩ / c_thz
 		k_diff = k_wΩ - self.k[:, None]
-		k_diff = k_diff - k_diff[:, 0][:, None]  # set k(w+Ω=0) - k(w) = 0;
+		k_diff = k_diff - k_diff[:, 0][:, None]  # k(w+Ω=0) - k(w) = 0;
 		return k_diff - self.k_Ω
 
 
@@ -187,7 +188,9 @@ class Spectrum():
 		df = pd.read_csv(self.f, header=None, names=['wl', 'alpha'])
 		wavelen = df['wl'].values  # [nm]
 		alpha = df['alpha'].values
-		spectrum = np.array([[wl, alpha[k]] for k, wl in enumerate(wavelen)])
+		spectrum = np.array(
+			[[wl, alpha[k]] for k, wl in enumerate(wavelen)]
+		)
 		return spectrum[spectrum[:,0].argsort()]  # sorted spectrum
 
 	def opt_spec(self):
@@ -200,7 +203,9 @@ class Spectrum():
 		# constant
 		w_min = c/200; w_max = c/800;  # [nm]
 		spec = self.read_spec(); w = spec[:,0]
-		opt_spec = spec[self.find_ind(w, w_min):self.find_ind(w, w_max), :]
+		opt_spec = spec[
+			self.find_ind(w, w_min):self.find_ind(w, w_max), :
+		]
 		return opt_spec
 
 
@@ -231,7 +236,10 @@ class Gaussian():
     def field_w(self, w):
         """ w - frequency 1d np array [Hz] """
         E = self.E0_w \
-            * np.exp( -1*( 2*np.pi*(self.w0 - np.array(w)) )**2 / self.delta**2 )
+            * np.exp( 
+            	-1 * ( 2*np.pi*(self.w0 - np.array(w)) )**2 
+            	/ self.delta**2 
+            )
         return E
 
 

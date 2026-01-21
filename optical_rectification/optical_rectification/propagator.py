@@ -1,17 +1,17 @@
 # propagator.py
 import numpy as np
 from scipy.integrate import solve_ivp
-from .definitions import c_thz, chi2_factor, chi2_mixing, Dispersion, Index
+from .definitions import c_thz, chi2_factor, chi2_mixing, Dispersion, Index, par
 
 class ORPropagator:
-    def __init__(self, w, Ω_max, pulse=None):
+    def __init__(self, w, Ω_max, index_w, index_Ω, pulse=None):
         self.w = w
         self.dw = w[1] - w[0]
         self.Ω = np.arange(1, int(Ω_max/self.dw) + 1) * self.dw
-        self.index_w = Index(w)
-        self.index_Ω = Index(self.Ω)
+        self.index_w = index_w
+        self.index_Ω = index_Ω
 
-        self.alpha_w = 1
+        self.alpha_w = self.index_w.alpha()
         self.alpha_Ω = self.index_Ω.alpha()
 
         self.dispersion = Dispersion(
@@ -54,7 +54,7 @@ class ORPropagator:
         # --- optical field ode ---
         for m in range(self.Nw):
             dEw[m] = (
-                -0.5 * self.alpha_w * Ew[m]
+                -0.5 * self.alpha_w[m] * Ew[m]
                 # -0.5 * self.alpha_w[m] * Ew[m] +
                 # -0.5 * 1j * self.pref_Ω[m]
                 # * chi2_mixing(Ew+Ω?, dw, m, Dk_up.T, z, E_conj=EΩ)

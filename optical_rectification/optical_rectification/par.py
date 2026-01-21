@@ -1,22 +1,11 @@
 # parameter file
 import os
 
-## parameters for eight Lorentz oscillators
+## parameters for eight Lorentz oscillators modeling refractive index in
+## Terahertz region
 ## [n_inf, [w1, gam1, a1], [w2, gam2, a2],...[w8, gam8, a8]]
-param_guess = [ 
-        2.17770253, 
-        [0.66616569,  0.39155946,  0.02588922], 
-        [1.05044626,  0.78700992,  0.144889], 
-        [2.66681166,  4.47792644,  0.1850857],
-        [5.11804151,  3.60140801,  0.41155744],
-        [5.95152113,  1.68777467,  0.06539503], 
-        [6.75972297,  2.05411217,  0.28160896], 
-        [8.31759649, 3.07122443,  0.78472676],
-        [17.08481059,  50,  0.46564823]
-        ]
-
-# from data in ref:
-param = [
+## from data in ref:
+param_thz = [
 		2.12358423e+00, 
 		[6.64150004e-01, 0.3*3.87674924e-01, 2.56647179e-02],
  		[1.05051147e+00, 0.3*7.91317790e-01, 1.45358886e-01], 
@@ -26,7 +15,7 @@ param = [
  		[6.76106905e+00, 0.3*2.10000000e+00, 2.94151150e-01], 
  		[8.31525915e+00, 0.3*3.09324550e+00, 7.98205276e-01], 
  		[1.75300342e+01, 0.3*1.80000000e+01, 2.57575216e+01],
- 		]
+]
 
 k = (6.28318531e12)*(5.78013078e-09)  ## global absorption scaling factor
 
@@ -37,3 +26,17 @@ fname = os.path.join(base_dir, '..', 'data', 'DSTMS_Optabsorption_cm-1.csv')
 fpath_n_opt = os.path.join(base_dir, '..', 'data', 'DSTMS_optical_refractve_index_nm.csv')
 fname_alpha_opt = os.path.abspath(fname)
 fname_n_opt = os.path.abspath(fpath_n_opt)
+
+## parameters for seven Lorentz oscillators modeling refractive index in
+## Optical region
+## [ [w1, gam1, a1], [w2, gam2, a2],...[w7, gam7, a7] ]
+## from data in ref:
+param_op = [
+                [1.51172213e+02, 2*1.00000000e+01, 5.26207870e+03],
+                [1.65349167e+02, 2*4.81439707e+00, 1.81928019e+03],
+                [1.71710164e+02, 2*2.00000000e+00, 9.97494678e+02],
+                [1.76000000e+02, 2*3.43231330e+00, 6.54147241e+03],
+                [2.14169102e+02, 2*7.00000000e+00, 1.99168749e+03],
+                [2.49791614e+02, 2*9.06570323e+00, 2.19861101e+03],
+                [2.94059844e+02, 2*2.60000000e+01, 3.35931650e+03]
+]
