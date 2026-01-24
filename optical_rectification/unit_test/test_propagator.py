@@ -9,19 +9,20 @@ def test_orpropagator():
     t_fwhm = 75e-3  # [ps]
     pulse = Gaussian(t_fwhm=t_fwhm, w0=w0, E0=5.431e8)
     w = np.linspace((w0 - 3*pulse.delta), (w0 + 3*pulse.delta), 2**10)
+    alpha_w = Index(w).alpha()
     Ω_max = 10
     Ew0 = pulse.field_w(w)
 
     try:
         # --- propagation model ---
-        model = ORPropagator(w, Ω_max, pulse=None)    
+        model = ORPropagator(w, Ω_max, Index(w), cascade=False)    
         # --- solver ---
         sol = run_simulation( model, Ew0, (0, DEPTH) )
         cond = sol.y[:, -1].shape == ((model.Nw + model.NΩ),)
         assert cond, (f"the model's state vector's degrees of freedom should ",
             "match the dimension of the fields")
         Ewf, EΩf = model.unpack( sol.y[:, -1] )
-        Ewf_expect = Ew0 * np.exp( -0.5 * DEPTH  )
+        Ewf_expect = Ew0 * np.exp( -0.5 * alpha_w * DEPTH  )
         assert np.allclose(Ewf_expect, Ewf, rtol=1e-2), f":/"
     except AssertionError as a:
         print(f'AssertionError: {a}')

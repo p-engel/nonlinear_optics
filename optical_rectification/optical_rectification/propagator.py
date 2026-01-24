@@ -1,15 +1,17 @@
 # propagator.py
 import numpy as np
 from scipy.integrate import solve_ivp
-from .definitions import c_thz, chi2_factor, chi2_mixing, Dispersion, Index, par
+from .definitions import c_thz, chi2_factor, Chi2_mixing, Dispersion, Index, par
 
 class ORPropagator:
-    def __init__(self, w, Ω_max, index_w, index_Ω, pulse=None):
+    def __init__(self, w, Ω_max, index_w, 
+        index_Ω=None, pulse=None, cascade=True
+    ):
         self.w = w
         self.dw = w[1] - w[0]
         self.Ω = np.arange(1, int(Ω_max/self.dw) + 1) * self.dw
         self.index_w = index_w
-        self.index_Ω = index_Ω
+        self.index_Ω = Index(self.Ω) if index_Ω is None else index_Ω
 
         self.alpha_w = self.index_w.alpha()
         self.alpha_Ω = self.index_Ω.alpha()
@@ -23,13 +25,14 @@ class ORPropagator:
         self.pref_Ω = chi2_factor(self.Ω, self.dispersion.k_Ω)
 
         # Phase matching matrices
-        self.Dk_up = self.dispersion.phase_match(conj=False)
-        self.Dk_dn = self.dispersion.phase_match(conj=True)
+        # self.Dk_up = self.dispersion.phase_match(conj=False)
+        # self.Dk_dn = self.dispersion.phase_match(conj=True)
 
         self.Nw = len(w)
         self.NΩ = len(self.Ω)
 
         self.pulse = pulse
+        self.cascade = cascade
 
     def pack(self, Ew, EΩ):
         return np.concatenate([Ew, EΩ])
@@ -39,28 +42,34 @@ class ORPropagator:
 
     def rhs(self, z, y):
         Ew, EΩ = self.unpack(y)
+        
+        Dk = self.dispersion.phase_match()
+        chi2_mixing = Chi2_mixing(Ew, self.dw, phase_match=Dk, z=z)
 
-        dEw = np.zeros_like(Ew, dtype=complex)
-        dEΩ = np.zeros_like(EΩ, dtype=complex)
-
+#        dEw = np.zeros_like(Ew, dtype=complex)
+#        dEΩ = np.zeros_like(EΩ, dtype=complex)
+#
         # --- terahertz field ode ---
-        for m in range(self.NΩ):
-            dEΩ[m] = (
-                -0.5 * self.alpha_Ω[m] * EΩ[m] +
-                -0.5 * 1j * self.pref_Ω[m] 
-                * chi2_mixing(Ew, self.dw, m, self.Dk_up, z)
-            )
+#         for m in range(self.NΩ):
+#             dEΩ[m] = (
+#                 -0.5 * self.alpha_Ω[m] * EΩ[m] +
+#                 -0.5 * 1j * self.pref_Ω[m] 
+#                 * chi2_mixing(Ew, self.dw, m, self.Dk_up, z)
+#             )
+
+        dEΩ = (
+            -0.5 * self.alpha_Ω * EΩ
+            -0.5j * self.pref_Ω * chi2_mixing.correlation()
+        )
 
         # --- optical field ode ---
-        for m in range(self.Nw):
-            dEw[m] = (
-                -0.5 * self.alpha_w[m] * Ew[m]
-                # -0.5 * self.alpha_w[m] * Ew[m] +
-                # -0.5 * 1j * self.pref_Ω[m]
-                # * chi2_mixing(Ew+Ω?, dw, m, Dk_up.T, z, E_conj=EΩ)
-                # -0.5 * 1j * self.pref_Ω[m]
-                # * chi2_mixing(Ew+Ω?, dw, m, Dk_dn.T, z, E_conj=EΩ)
-            )
+#         for m in range(self.Nw):
+#             dEw[m] = (
+#                 -0.5 * self.alpha_w[m] * Ew[m]
+#             )
+        dEw = -0.5 * self.alpha_w * Ew
+        if self.cascade:
+            dEw += -0.5j * self.pref_w * chi2_mixing.cascade(EΩ)
 
         return self.pack(dEw, dEΩ)
 

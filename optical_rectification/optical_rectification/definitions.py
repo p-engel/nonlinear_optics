@@ -113,7 +113,7 @@ class Dispersion():
 	"""
 	dispersion relation for optical rectification (OR)
 	"""
-	def __init__(self, w, n, Ω=[0], n_Ω=[0]):
+	def __init__(self, w, n, Ω=None, n_Ω=None):
 		"""
 		w       : frequency domain of input optical pulse  [THz]
 		n(w)    : refractive index in medium
@@ -121,11 +121,11 @@ class Dispersion():
 		n_Ω     : n(Ω)
 		"""
 		self.w = np.array(w)
-		self.Ω = np.array(Ω)
+		self.Ω = np.array(Ω) if Ω is not None else np.array([1e-9]) 
 		self.n = np.array(n)
 		self.n_Ω = np.array(n_Ω)
 		self.nu = c_thz / self.n                    # phase velocity
-		self.nu_Ω = c_thz / self.n_Ω
+		self.nu_Ω = c_thz / self.n_Ω if n_Ω is not None else 1e-9
 		self.k = self.w * (1 / self.nu)
 		self.k_Ω = self.Ω * (1 / self.nu_Ω)
 
@@ -224,7 +224,7 @@ class Gaussian():
         self.delta = 2 / self.tau  # 1 / e width in frequency domain
         self.w0 = w0
         self.E0 = E0
-        self.E0_w = E0 * np.sqrt(np.pi) * self.tau
+        self.E0_w = E0 * self.tau
         return
     
     def field_t(self, t):
@@ -243,26 +243,26 @@ class Gaussian():
         return E
 
 
-def corr(E, domega, m, up=True):
-    """
-    E       : complex 1D array on uniform grid E(w)
-    domega  : grid spacing dw
-    m       : integer shift index, Ω_m = m * dw
-
-    returns : Riemann sum ∫ E(w + Ω_m) * conjugate[E(w)] dw,
-              else ∫ E(w - Ω_m) * E(w) dw, if down=True
-    """
-    if m < 0: raise ValueError("m must be non-negative")
-
-    N = len(E)
-    if m >= N: return 0.0
-
-    if up:
-        # Up shift/conversion
-        return domega * np.sum(E[m:] * np.conjugate(E[:N - m]))
-    elif not up:
-        # Down shift/conversion
-        return domega * np.sum(E[:N-m] * E[m:])
+# def corr(E, domega, m, up=True):
+#     """
+#     E       : complex 1D array on uniform grid E(w)
+#     domega  : grid spacing dw
+#     m       : integer shift index, Ω_m = m * dw
+# 
+#     returns : Riemann sum ∫ E(w + Ω_m) * conjugate[E(w)] dw,
+#               else ∫ E(w - Ω_m) * E(w) dw, if down=True
+#     """
+#     if m < 0: raise ValueError("m must be non-negative")
+# 
+#     N = len(E)
+#     if m >= N: return 0.0
+# 
+#     if up:
+#         # Up shift/conversion
+#         return domega * np.sum(E[m:] * np.conjugate(E[:N - m]))
+#     elif not up:
+#         # Down shift/conversion
+#         return domega * np.sum(E[:N-m] * E[m:])
  
 
 def chi2_factor(freq, k):
@@ -306,3 +306,58 @@ def chi2_mixing(E, domega, m, Dk, z, up=True, E_conj=None):
         integrand = E[:N-m] * np.conj(E_conj[m:]) * phase
 
     return domega * np.sum(integrand)
+
+
+class Chi2_mixing():
+    def __init__(self, E_opt, domega, phase_match=None, z=0.0):
+        self.Ew = E_opt
+        self.dw = domega
+        self.Dk = phase_match
+        self.z = z
+        self.Nw = len(E_opt)
+        self.NΩ = self.Dk.shape[1] if self.Dk is not None else self.Nw
+
+        if self.Dk is not None:
+            assert self.Dk.shape == (self.Nw, self.NΩ)
+
+    def kernel(self, mode="sum"):
+        """
+        mode = "sum"    -> K(ω, Ω) = E(ω + Ω)
+        mode = "diff"   -> K(ω, Ω) = E(ω - Ω)
+        """
+        K = np.zeros((self.Nw, self.NΩ), dtype=complex)
+
+        if mode == "sum":
+            for l in range(self.Nw):
+                max_m = min(self.NΩ, self.Nw - l)
+                K[l, :max_m] = self.Ew[l : l + max_m]
+
+        elif mode == "diff":
+            for l in range(self.Nw):
+                max_m = min(self.NΩ, l + 1)                         # Ω ≤ ω
+                K[l, :max_m] = self.Ew[l::-1][:max_m]
+
+        else:
+            raise ValueError("mode must be 'sum' or 'diff'")
+
+        if self.Dk is not None:
+            K *= np.exp(-1j * self.z * self.Dk)
+
+        return K
+
+    def correlation(self):
+        """Integrates K(ω, Ω) with E*(ω) over w"""
+        return self.dw * np.sum(
+            self.kernel(mode="sum") * np.conjugate(self.Ew)[:, None], 
+            axis=0
+        )
+
+    def cascade(self, E_thz):
+        """Integrates K(ω, Ω) with E_THz*(Ω) over Ω"""
+        Kup = self.kernel(mode="sum")
+        Kdwn = self.kernel(mode="diff")
+
+        return self.dw * (
+            np.sum(Kup * np.conjugate(E_thz[None, :]), axis=1) +
+            np.sum(Kdwn * E_thz[None, :], axis=1)
+        )
