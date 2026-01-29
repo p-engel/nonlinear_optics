@@ -7,8 +7,12 @@ def test_fabryperot():
     cavity = FabryPerot(reflectance=0.5, index=3.42, length=L)
     try:
         delta_nu = cavity.peak_bandwidth()
-        
+        transmittance = cavity.T()
+
         assert delta_nu.shape==L.shape, f"input shape should match output"
+        assert np.isclose(transmittance, 1).all(), (
+            f"by definition transmittance is 1 for no incident frequency"
+        )
 
     except AssertionError as a: print(f"AssertionError: {a}")
 

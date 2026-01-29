@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 from definition import FabryPerot
 
 L = np.linspace(1750, 2000, 2**10) * 1e-6  # [m]
-cavity = FabryPerot(reflectance=0.5, index=3.42, length=L)
+cavity = FabryPerot(reflectance=0.5, index=3.42, length=L, freq=8.5)
 delta_nu = cavity.peak_bandwidth()
 print(delta_nu[-1]*1e3)
 print(cavity.fsr()[-1]*1e3)
@@ -17,4 +17,19 @@ ax.set_xlabel(r"slab thickness [${\rm {\mu}m}$]")
 ax.set_ylabel(r"$[{\rm GHz}]$")
 plt.legend()
 plt.grid(True)
+
+# transmittance
+fig1, ax1 = plt.subplots()
+
+freqs = np.linspace(8.45, 8.55, 2**9)  # [THz]
+transmittance = FabryPerot(
+    reflectance=0.5, index=-3.42, length=2e-3, freq=freqs
+).T()
+
+ax1.plot(freqs, transmittance, "-k", label="Transmittance")
+ax1.set_title(f"Fabry-Perot resonance in slab n=3.42, R=0.5, L=2 mm")
+ax1.set_xlabel(r"$\omega \:\: [{\rm THz}]$")
+ax1.set_ylabel(r"Transmittance $[1]$")
+plt.grid(True)
+
 plt.show()
