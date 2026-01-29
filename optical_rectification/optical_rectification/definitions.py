@@ -224,21 +224,20 @@ class Gaussian():
         self.delta = 2 / self.tau  # 1 / e width in frequency domain
         self.w0 = w0
         self.E0 = E0
-        self.E0_w = E0 * self.tau
+        self.E0_w = E0 * np.sqrt(np.pi) * 2 / self.delta
         return
     
     def field_t(self, t):
         """ t - time 1d np array [s] """
-        E = self.E0 * np.exp( -1*np.array(t)**2 / self.tau**2 ) \
+        E = self.E0 * np.exp( -1 * (np.array(t) / self.tau)**2 ) \
             * np.exp( -1j*self.w0*np.array(t) )
         return E
 
     def field_w(self, w):
         """ w - frequency 1d np array [Hz] """
         E = self.E0_w \
-            * np.exp( 
-            	-1 * ( 2*np.pi*(self.w0 - np.array(w)) )**2 
-            	/ self.delta**2 
+            * np.exp( -1 *
+            	( 2*np.pi * (self.w0 - np.array(w)) / self.delta )**2 
             )
         return E
 

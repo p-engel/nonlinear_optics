@@ -20,9 +20,10 @@ def test_gaussian():
         I_peak = (EPS0*c/2) * np.abs(E_peak)**2
         I_w = (EPS0*c/2) * np.abs(E_w)**2
         
-        ind_fwhm = abs(1/2 - I_w/I_peak) < 1.2e-2
+        ind_fwhm = abs(1/2 - I_w/I_peak) < 1.2e-3
         w_fwhm = abs( max(w[ind_fwhm]) - min(w[ind_fwhm]) )
         print("The bandwith (FWHM) is ", w_fwhm, " [THz]." )
+        print( pulse.delta * np.sqrt(2 * np.log(2)) / (2*np.pi) )
         cond = abs((t_fwhm * w_fwhm) - TBP) < 1e-2
         assert cond, "The pulse doesn't satisfy the time-bandwith product"
 
