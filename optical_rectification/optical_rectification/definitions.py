@@ -152,7 +152,7 @@ class Dispersion():
 		else:
 			return self.Ω * (1/self.nu_g()[:, None] - 1/self.nu_Ω) 
 
-	def phase_match(self, conj=False):
+	def phase_match(self):
 		"""
 		----
 		Return
