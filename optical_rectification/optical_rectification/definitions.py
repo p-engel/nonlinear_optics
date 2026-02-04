@@ -174,15 +174,16 @@ class Gaussian():
     Wave package with gaussian envelop, 
     propagating sinusoidially at carrier frequency
     """
-    def __init__(self, t_fwhm=None, w0=None, E0=None):
+    def __init__(self, t_fwhm=1, w0=0, E0=1, Nw=2**10):
         """
-        t_fwhm  : full width at half maximum in time [s]
-        w0      : carrier frequency [Hz]
+        t_fwhm  : full width at half maximum in time [ps]
+        w0      : carrier frequency [THz]
         E       : peak intensity in time [V/m]
         """
         self.tau = np.sqrt(2) * (t_fwhm) / ( 2 * np.sqrt(np.log(2)) )
         self.delta = 2 / self.tau  # 1 / e width in frequency domain
         self.w0 = w0
+        self.w = np.linspace(w0 - 3*self.delta, w0 + 3*self.delta, Nw)   
         self.E0 = E0
         self.E0_w = E0 * np.sqrt(np.pi) * 2 / self.delta
         return
@@ -193,12 +194,12 @@ class Gaussian():
             * np.exp( -1j*self.w0*np.array(t) )
         return E
 
-    def field_w(self, w):
-        """ w - frequency 1d np array [Hz] """
-        E = self.E0_w \
-            * np.exp( -1 *
-            	( 2*np.pi * (self.w0 - np.array(w)) / self.delta )**2 
-            )
+    def field_w(self):
+        E = self.E0_w * np.exp( -1 * 
+            ( 
+                2*np.pi * (self.w0 - self.w) / self.delta
+            )**2 
+        )
         return E
 
 
