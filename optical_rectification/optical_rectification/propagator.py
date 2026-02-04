@@ -1,7 +1,6 @@
 # propagator.py
-# import numpy as np
 from numpy import arange, zeros_like, concatenate
-# from scipy.integrate import solve_ivp
+from . import par
 from .definitions import chi2_factor, Chi2_mixing, Dispersion, Index
 
 class ORPropagator:
@@ -11,8 +10,8 @@ class ORPropagator:
         self.dw = self.w[1] - self.w[0]
         self.Ω = arange(1, int(Ω_max/self.dw) + 1) * self.dw
 
-        self.index_Ω = Index(self.Ω)
-        self.index_w = Index(self.w)
+        self.index_Ω = Index(self.Ω, param=par.param_thz)
+        self.index_w = Index(self.w, param=par.param_op, k=1)
 
         self.alpha_w = self.index_w.alpha()
         self.alpha_Ω = self.index_Ω.alpha()
@@ -56,21 +55,3 @@ class ORPropagator:
             dEw += -0.5j * self.pref_w * chi2_mixing.cascade(EΩ)
 
         return self.pack(dEw, dEΩ)
-
-
-# def run_simulation(model, Ew0, z_span, z_eval=None):
-#     EΩ0 = np.zeros_like(model.Ω, dtype=complex)
-#     y0 = model.pack(Ew0, EΩ0)
-# 
-#     sol = solve_ivp(
-#         model.rhs,
-#         z_span,
-#         y0,
-#         method="DOP853",
-#         t_eval=z_eval,
-#         rtol=1e-5,
-#         atol=1e-8,
-#         max_step=(z_span[1] - z_span[0]) / 200
-#     )
-# 
-#     return sol

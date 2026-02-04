@@ -14,7 +14,6 @@ OR Simulation with consistent scaling
 # constants
 c = 299792458.0             	# speed of light [m * Hz]
 c_thz = c * 1e-12           	# speed of light [m * THz]
-p = np.array(par.param_thz[1:])
 TBP = 2*np.log(2) / np.pi   	# time-bandwith product
 CHI2 = 428e-12              	# [m / V]
 DEPTH = 0.4e-3              	# crystal length [m]
@@ -25,9 +24,7 @@ class Index():
 	Refractive index n(ω) and absorption α(ω) 
 	with Lorentz model.
 	"""
-	def __init__(self, w, 
-			w0=None, gam0=None, a=None, n_inf=None, k=None
-			):
+	def __init__(self, w, param=None, k=None):
 		"""
 		Parameters
 		----------
@@ -45,10 +42,11 @@ class Index():
 			global absorption scaling factor [1/(Hz*mm) ?]
 		"""
 		self.w = w;
-		self.n_inf = par.param_thz[0] if n_inf is None else n_inf;
-		self.w0 = p[:,0] if w0 is None else w0; 
-		self.gam0 = p[:,1] if gam0 is None else gam0;
-		self.a = p[:,2] if a is None else a;
+		self.p = par.param_thz if param is None else param
+		self.n_inf = self.p[0]
+		self.w0 = np.array( [pi[0] for pi in self.p[1:]] )
+		self.gam0 = np.array( [pi[1] for pi in self.p[1:]] )
+		self.a = np.array( [pi[2] for pi in self.p[1:]] )
 		self.k = par.k if k is None else k
 		self.n_osc = len(self.w0)
 
