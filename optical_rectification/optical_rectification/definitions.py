@@ -159,54 +159,14 @@ class Dispersion():
 		∆k(w, Ω)   : exact OR phase matching condition
 					k(w + Ω) - k(w) - k(Ω)
 		"""
-		if not conj: w_Ω = self.w[:, None] + self.Ω
-		else: w_Ω = self.w[:, None] - self.Ω; self.k_Ω = -self.k_Ω
+		w_Ω = self.w[:, None] + self.Ω
 
-		# M = len(self.Ω)
 		n_wΩ = Index(w_Ω).n()
 
-		# k_wΩ = w_Ω * n_wΩ.T / c_thz
 		k_wΩ = w_Ω * n_wΩ / c_thz
 		k_diff = k_wΩ - self.k[:, None]
 		k_diff = k_diff - k_diff[:, 0][:, None]  # k(w+Ω=0) - k(w) = 0;
 		return k_diff - self.k_Ω
-
-
-class Spectrum():
-	"""
-	read and graph spectrum
-	"""
-	def __init__(self, filename):
-		self.f = filename
-
-	def find_ind(self, arr, value):
-		arr = np.array(arr)
-		idx = (np.abs(arr - value)).argmin()
-		return idx
-
-	def read_spec(self):
-		df = pd.read_csv(self.f, header=None, names=['wl', 'alpha'])
-		wavelen = df['wl'].values  # [nm]
-		alpha = df['alpha'].values
-		spectrum = np.array(
-			[[wl, alpha[k]] for k, wl in enumerate(wavelen)]
-		)
-		return spectrum[spectrum[:,0].argsort()]  # sorted spectrum
-
-	def opt_spec(self):
-		"""
-		Read absorption spectrum and return truncated spectrum
-		in the optical region: 150 - 800 THz
-		Return 
-		spectrum : numpy array (N, 2)
-		"""
-		# constant
-		w_min = c/200; w_max = c/800;  # [nm]
-		spec = self.read_spec(); w = spec[:,0]
-		opt_spec = spec[
-			self.find_ind(w, w_min):self.find_ind(w, w_max), :
-		]
-		return opt_spec
 
 
 class Gaussian():
@@ -242,28 +202,6 @@ class Gaussian():
         return E
 
 
-# def corr(E, domega, m, up=True):
-#     """
-#     E       : complex 1D array on uniform grid E(w)
-#     domega  : grid spacing dw
-#     m       : integer shift index, Ω_m = m * dw
-# 
-#     returns : Riemann sum ∫ E(w + Ω_m) * conjugate[E(w)] dw,
-#               else ∫ E(w - Ω_m) * E(w) dw, if down=True
-#     """
-#     if m < 0: raise ValueError("m must be non-negative")
-# 
-#     N = len(E)
-#     if m >= N: return 0.0
-# 
-#     if up:
-#         # Up shift/conversion
-#         return domega * np.sum(E[m:] * np.conjugate(E[:N - m]))
-#     elif not up:
-#         # Down shift/conversion
-#         return domega * np.sum(E[:N-m] * E[m:])
- 
-
 def chi2_factor(freq, k):
     """
     Second-order nonlinear mixing
@@ -271,40 +209,6 @@ def chi2_factor(freq, k):
     k    : 1d array, dispersion relation [1 / m]
     """
     return CHI2 * freq**2 / (c_thz**2 * k)              # [1 / V]
-
-
-def chi2_mixing(E, domega, m, Dk, z, up=True, E_conj=None):
-    """
-    Phase-matched correlation integral
-
-    Input
-    ------
-    E       : optical field E(ω)
-    E_conj  : conjugate field if cross correlation
-    domega  : frequency spacing
-    m       : integer shift index, Ω_m = m * Δω
-    Dk      : 2D array Δk(ω, Ω), shape (Nω, NΩ)
-    z       : propagation distance
-    up      : up/down conversion
-
-    Returns
-    -------
-    ∫ E(ω±Ω) E*(ω) exp(-i z Δk) dω
-    """
-    if m < 0: raise ValueError("m must be non-negative")
-
-    N = len(E)
-    if m >= N: return 0.0
-    if E_conj is None: E_conj = np.conj(E)
-
-    phase = np.exp(-1j * z * Dk[:N-m, m])
-
-    if up:
-        integrand = E[m:] * E_conj[:N-m] * phase
-    else:
-        integrand = E[:N-m] * np.conj(E_conj[m:]) * phase
-
-    return domega * np.sum(integrand)
 
 
 class Chi2_mixing():
