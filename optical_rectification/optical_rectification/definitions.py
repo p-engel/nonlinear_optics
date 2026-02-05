@@ -12,12 +12,13 @@ OR Simulation with consistent scaling
 - Uses SciPy Runge-Kutta (solve_ivp)
 """
 # constants
-c = 299792458.0             	# speed of light [m * Hz]
-c_thz = c * 1e-12           	# speed of light [m * THz]
-TBP = 2*np.log(2) / np.pi   	# time-bandwith product
-CHI2 = 428e-12              	# [m / V]
-DEPTH = 0.4e-3              	# crystal length [m]
-EPS0 = 8.85e-12  				# permitivity [C^2 / Kg^1 / m^3 /s^2]
+c = 299792458.0             # speed of light [m * Hz]
+c_thz = c * 1e-12           # speed of light [m * THz]
+TBP = 2*np.log(2) / np.pi   # time-bandwith product
+CHI2 = 428e-12              # [m / V]
+DEPTH = 0.4e-3              # crystal length [m]
+EPS0 = 8.85e-12  			# permitivity [C^2 / Kg^1 / m^3 /s^2]
+gam3PA = 0                  # []
 
 
 class Index():
@@ -209,6 +210,10 @@ def chi2_factor(freq, k):
     k    : 1d array, dispersion relation [1 / m]
     """
     return CHI2 * freq**2 / (c_thz**2 * k)              # [1 / V]
+
+def three_photon_loss(Ew, n=1):
+    Iw = (n * EPS0 * c_thz / 2) * np.abs(Ew)**2
+    return gam3PA * Iw**2                               # []
 
 
 class Chi2_mixing():
