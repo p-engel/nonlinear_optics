@@ -16,7 +16,7 @@ def test_or_simulation():
             cascade=False
         )
         cond = ( output["sol"].y[:, -1].shape == (
-                (output["model"].Nw + output["model"].NΩ),
+                ( len(output["pulse"].w) + len(output["model"].Ω) ),
             )
         )
         assert cond, (

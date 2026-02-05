@@ -36,4 +36,5 @@ def or_simulation(
         "EΩ": EΩf,
         "sol": sol,
         "model": model,
+        "pulse": pulse
     }
