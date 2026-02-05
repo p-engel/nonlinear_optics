@@ -1,6 +1,6 @@
 from scipy.integrate import solve_ivp
 from .propagator import ORPropagator
-from .definitions import Gaussian, Index
+from .definitions import Gaussian 
 
 def or_simulation(
     w0: float = 203,        # [THz]
