@@ -51,7 +51,9 @@ class ORPropagator:
             -0.5j * self.pref_Ω * chi2_mixing.correlation()
         )
         # --- optical field ode ---
-        dEw = -0.5 * ( self.alpha_w + three_photon_loss(Ew) ) * Ew
+        dEw = -0.5 * (
+            self.alpha_w + three_photon_loss(Ew, self.index_w.n()) 
+        ) * Ew
         if self.cascade:
             dEw += -0.5j * self.pref_w * chi2_mixing.cascade(EΩ)
 
