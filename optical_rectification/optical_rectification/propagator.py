@@ -1,5 +1,5 @@
 # propagator.py
-from numpy import arange, zeros_like, concatenate, abs
+from numpy import arange, zeros_like, concatenate
 from . import par
 from .definitions import three_photon_loss, chi2_factor, Chi2_mixing, \
 Dispersion, Index
