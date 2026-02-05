@@ -18,7 +18,7 @@ TBP = 2*np.log(2) / np.pi   # time-bandwith product
 CHI2 = 428e-12              # [m / V]
 DEPTH = 0.4e-3              # crystal length [m]
 EPS0 = 8.85e-12  			# permitivity [C^2 / Kg^1 / m^3 /s^2]
-gam3PA = 0                  # []
+gam3PA = 6e-26				# [m^3/W^2] 3 photon absorption
 
 
 class Index():
@@ -211,7 +211,7 @@ def chi2_factor(freq, k):
     """
     return CHI2 * freq**2 / (c_thz**2 * k)              # [1 / V]
 
-def three_photon_loss(Ew, n=1):
+def three_photon_loss(Ew, n):
     Iw = (n * EPS0 * c_thz / 2) * np.abs(Ew)**2
     return gam3PA * Iw**2                               # []
 
