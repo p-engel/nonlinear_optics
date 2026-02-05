@@ -1,10 +1,10 @@
 # propagator.py
-from numpy import arange, zeros_like, concatenate
+from numpy import arange, zeros_like, concatenate, abs
 from . import par
-from .definitions import chi2_factor, Chi2_mixing, Dispersion, Index
+from .definitions import EPS0, c_thz, chi2_factor, Chi2_mixing, Dispersion, Index
 
 class ORPropagator:
-    def __init__(self, Ω_max, pulse, cascade=True):
+    def __init__(self, Ω_max, pulse, gam3PA=0, cascade=True):
         self.pulse = pulse
         self.w = pulse.w
         self.dw = self.w[1] - self.w[0]
@@ -27,6 +27,7 @@ class ORPropagator:
         self.Nw = len(self.w)
         self.NΩ = len(self.Ω)
 
+        self.gam3PA = gam3PA
         self.cascade = cascade
 
         self.Ew0 = self.pulse.field_w()
@@ -50,7 +51,10 @@ class ORPropagator:
             -0.5j * self.pref_Ω * chi2_mixing.correlation()
         )
         # --- optical field ode ---
-        dEw = -0.5 * self.alpha_w * Ew
+        dEw = -0.5 * (
+            self.alpha_w +
+            self.gam3PA * ( (EPS0*c_thz/2) * abs(Ew)**2 )**2
+        ) * Ew
         if self.cascade:
             dEw += -0.5j * self.pref_w * chi2_mixing.cascade(EΩ)
 

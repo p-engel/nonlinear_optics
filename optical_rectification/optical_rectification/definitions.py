@@ -17,6 +17,7 @@ c_thz = c * 1e-12           	# speed of light [m * THz]
 TBP = 2*np.log(2) / np.pi   	# time-bandwith product
 CHI2 = 428e-12              	# [m / V]
 DEPTH = 0.4e-3              	# crystal length [m]
+EPS0 = 8.85e-12  				# permitivity [C^2 / Kg^1 / m^3 /s^2]
 
 
 class Index():
