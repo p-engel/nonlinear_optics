@@ -18,7 +18,7 @@ TBP = 2*np.log(2) / np.pi   # time-bandwith product
 CHI2 = 428e-12              # [m / V]
 DEPTH = 0.4e-3              # crystal length [m]
 EPS0 = 8.85e-12  			# permitivity [C^2 / Kg^1 / m^3 /s^2]
-gam3PA = 6e-26				# [m^3/W^2] 3 photon absorption
+gam3PA = 0*6e-26				# [m^3/W^2] 3 photon absorption
 
 
 class Index():
@@ -113,31 +113,40 @@ class Dispersion():
 	"""
 	dispersion relation for optical rectification (OR)
 	"""
-	def __init__(self, w, n, Ω=None, n_Ω=None):
+	def __init__(self, w, n, Ω=[1e-9], n_Ω=[1e-9]):
 		"""
 		w       : frequency domain of input optical pulse  [THz]
 		n(w)    : refractive index in medium
 		Ω       : terahertz domain  Ω << w  [THz]
 		n_Ω     : n(Ω)
 		"""
-		self.w = np.array(w)
-		self.Ω = np.array(Ω) if Ω is not None else np.array([1e-9]) 
-		self.n = np.array(n)
-		self.n_Ω = np.array(n_Ω)
-		self.nu = c_thz / self.n                    # phase velocity
-		self.nu_Ω = c_thz / self.n_Ω if n_Ω is not None else 1e-9
-		self.k = self.w * (1 / self.nu)
-		self.k_Ω = self.Ω * (1 / self.nu_Ω)
+		self.w = np.array(w); self.Ω = np.array(Ω)
+		self.n = np.array(n); self.n_Ω = np.array(n_Ω)
+# 		self.n_Ω = np.array(n_Ω)
+# 		self.nu = c_thz / self.n                    # phase velocity
+# 		self.nu_Ω = c_thz / self.n_Ω if n_Ω is not None else 1e-9
+		self.k = self.w * self.n / c_thz
+		self.k_Ω = self.Ω * self.n_Ω / c_thz
 
-	def nu_g(self, w0=None):
+# 	def nu_g(self, w0=None):
+# 		"""group velocity"""
+# 		ng = self.n + (self.w * np.gradient(self.n, self.w))
+
+# 		if w0 is not None: 
+# 			iw0 = np.argmin(np.abs(self.w - w0))
+# 			return c_thz / ng[iw0]
+# 		else: 
+# 			return c_thz / ng
+
+	def dk_dw(self, w0=None):
 		"""group velocity"""
-		ng = self.n + (self.w * np.gradient(self.n, self.w))
+		dk_dw = np.gradient(self.k, self.w)
 
 		if w0 is not None: 
 			iw0 = np.argmin(np.abs(self.w - w0))
-			return c_thz / ng[iw0]
+			return dk_dw[iw0]
 		else: 
-			return c_thz / ng
+			return dk_dw
 
 	def deltak(self, w0=None):
 		"""
@@ -148,25 +157,29 @@ class Dispersion():
 					where n is the refractive index
 		"""
 		if w0 is not None:
-			return self.Ω * (1/self.nu_g(w0=w0) - 1/self.nu_Ω)
+			return self.Ω * dk_dw(w0=w0) - self.k_Ω
 		else:
-			return self.Ω * (1/self.nu_g()[:, None] - 1/self.nu_Ω) 
+			return (
+				self.Ω[None, :] * self.dk_dw()[:, None] - 
+				self.k_Ω[None, :]
+			)
 
-	def phase_match(self):
+	def phase_match(self, conj=False):
 		"""
 		----
 		Return
 		∆k(w, Ω)   : exact OR phase matching condition
 					k(w + Ω) - k(w) - k(Ω)
 		"""
-		w_Ω = self.w[:, None] + self.Ω
+		if not conj: w_Ω = self.w[:, None] + self.Ω[None, :]
+		else: w_Ω = self.w[:, None] - self.Ω[None, :]
 
-		n_wΩ = Index(w_Ω).n()
+		n_wΩ = Index(w_Ω, param=par.param_op, k=1).sellmeier()
 
+		k_Ω = self.k_Ω if not conj else -self.k_Ω
 		k_wΩ = w_Ω * n_wΩ / c_thz
 		k_diff = k_wΩ - self.k[:, None]
-		k_diff = k_diff - k_diff[:, 0][:, None]  # k(w+Ω=0) - k(w) = 0;
-		return k_diff - self.k_Ω
+		return k_diff - k_Ω[None, :]
 
 
 class Gaussian():
@@ -183,7 +196,7 @@ class Gaussian():
         self.tau = np.sqrt(2) * (t_fwhm) / ( 2 * np.sqrt(np.log(2)) )
         self.delta = 2 / self.tau  # 1 / e width in frequency domain
         self.w0 = w0
-        self.w = np.linspace(w0 - 3*self.delta, w0 + 3*self.delta, Nw)   
+        self.w = np.linspace(w0 - 1*self.delta, w0 + 1*self.delta, Nw)   
         self.E0 = E0
         self.E0_w = E0 * np.sqrt(np.pi) * 2 / self.delta
         return
@@ -212,21 +225,22 @@ def chi2_factor(freq, k):
     return CHI2 * freq**2 / (c_thz**2 * k)              # [1 / V]
 
 def three_photon_loss(Ew, n):
-    Iw = (n * EPS0 * c_thz / 2) * np.abs(Ew)**2
+    Iw = (n * EPS0 * c / 2) * np.abs(Ew)**2             # [W / m^2 * ps^2]
     return gam3PA * Iw**2                               # []
 
 
 class Chi2_mixing():
-    def __init__(self, E_opt, domega, phase_match=None, z=0.0):
+    def __init__(self, E_opt, domega, NΩ, Dk_up=1, Dk_dwn=1, z=0.0):
         self.Ew = E_opt
         self.dw = domega
-        self.Dk = phase_match
+        self.Dk_up = Dk_up
+        self.Dk_dwn = Dk_dwn
         self.z = z
         self.Nw = len(E_opt)
-        self.NΩ = self.Dk.shape[1] if self.Dk is not None else self.Nw
+        self.NΩ = NΩ 
 
-        if self.Dk is not None:
-            assert self.Dk.shape == (self.Nw, self.NΩ)
+#         if isinstance(Dk_up, np.ndarray):
+#             assert self.Dk_up.shape == (self.Nw, self.NΩ)
 
     def kernel(self, mode="sum"):
         """
@@ -239,17 +253,18 @@ class Chi2_mixing():
             for l in range(self.Nw):
                 max_m = min(self.NΩ, self.Nw - l)
                 K[l, :max_m] = self.Ew[l : l + max_m]
+            
+            K *= np.exp(-1j * self.z * self.Dk_up)
 
         elif mode == "diff":
             for l in range(self.Nw):
                 max_m = min(self.NΩ, l + 1)                         # Ω ≤ ω
                 K[l, :max_m] = self.Ew[l::-1][:max_m]
+            
+            K *= np.exp(-1j * self.z * self.Dk_dwn)
 
         else:
             raise ValueError("mode must be 'sum' or 'diff'")
-
-        if self.Dk is not None:
-            K *= np.exp(-1j * self.z * self.Dk)
 
         return K
 
