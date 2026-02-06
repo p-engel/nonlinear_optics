@@ -25,7 +25,7 @@ def test_or_simulation():
         )
         Ewf_expect = ( 
             output["model"].Ew0 
-            * exp( -0.5 * output["model"].alpha_w * depth  )
+            * exp( -0.5 * output["model"].index_w.alpha() * depth  )
         )
         assert allclose(Ewf_expect, output["Ew"], rtol=1e-2), f":/"
     except AssertionError as a:
