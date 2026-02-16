@@ -11,3 +11,5 @@ optical_rectification/.ipynb_checkpoints
 strong_coupling/__pycache__/
 strong_coupling/graph_FPresonance.py
 optical_rectification/optical_rectification/draft
+.DS_Store
+optical_rectification/data/DSTMS_optical_absorption_nm-cm-1.csv
