@@ -1,22 +1,22 @@
 # unit test run.py
 from numpy import exp, allclose
-from optical_rectification.run import or_simulation
-from optical_rectification.definitions import Index, Gaussian
+from optical_rectification import run 
+from optical_rectification import propagator
+from optical_rectification.definitions import Gaussian
 
 def test_or_simulation():
-    # --- initial input field ---
-    w0 = 203        # [THz]
-    t_fwhm = 75e-3  # [ps]
-    E0 = 5.431e8    # [V/m]
-    depth = 1e-3    # [m]
+#     # --- initial input field ---
+#     w0 = 203        # [THz]
+#     t_fwhm = 75e-3  # [ps]
+#     E0 = 5.431e8    # [V/m]
+#     depth = 1e-3    # [m]
 
     try:
-        output = or_simulation(
-            t_fwhm=t_fwhm, w0=w0, E0=E0, depth=depth,
-            cascade=False
-        )
+        pulse = Gaussian()
+        model = propagator.ORPropagator(pulse, cascade=False)
+        output = run.or_simulation(model)
         cond = ( output["sol"].y[:, -1].shape == (
-                ( len(output["pulse"].w) + len(output["model"].Ω) ),
+                ( len(pulse.w) + len(output["model"].Ω) ),
             )
         )
         assert cond, (
@@ -25,7 +25,11 @@ def test_or_simulation():
         )
         Ewf_expect = ( 
             output["model"].Ew0 
-            * exp( -0.5 * output["model"].index_w.alpha() * depth  )
+            * exp( -0.5 * (
+                output["model"].index_w.alpha()
+                + 1j * output["model"].field_dispersion
+                ) * model.DEPTH
+            )
         )
         assert allclose(Ewf_expect, output["Ew"], rtol=1e-2), f":/"
     except AssertionError as a:
