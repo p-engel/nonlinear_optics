@@ -122,31 +122,26 @@ class Dispersion():
 		"""
 		self.w = np.array(w); self.Ω = np.array(Ω)
 		self.n = np.array(n); self.n_Ω = np.array(n_Ω)
-# 		self.n_Ω = np.array(n_Ω)
-# 		self.nu = c_thz / self.n                    # phase velocity
-# 		self.nu_Ω = c_thz / self.n_Ω if n_Ω is not None else 1e-9
 		self.k = self.w * self.n / c_thz
 		self.k_Ω = self.Ω * self.n_Ω / c_thz
 
-# 	def nu_g(self, w0=None):
-# 		"""group velocity"""
-# 		ng = self.n + (self.w * np.gradient(self.n, self.w))
-
-# 		if w0 is not None: 
-# 			iw0 = np.argmin(np.abs(self.w - w0))
-# 			return c_thz / ng[iw0]
-# 		else: 
-# 			return c_thz / ng
+	def iw0(self, w0): return np.argmin(np.abs(self.w - w0))
 
 	def dk_dw(self, w0=None):
-		"""group velocity"""
+		"""inverse group velocity of input pulse"""
 		dk_dw = np.gradient(self.k, self.w)
 
-		if w0 is not None: 
-			iw0 = np.argmin(np.abs(self.w - w0))
-			return dk_dw[iw0]
-		else: 
-			return dk_dw
+		if w0 is not None: dk_dw = dk_dw[self.iw0(w0)]
+
+		return dk_dw
+
+	def beta2(self, w0=None):
+		"""group velocity dispersion"""
+		beta2 = np.gradient(self.dk_dw(), self.w)
+
+		if w0 is not None: beta2 = beta2[self.iw0(w0)]
+
+		return beta2
 
 	def deltak(self, w0=None):
 		"""
@@ -157,7 +152,7 @@ class Dispersion():
 					where n is the refractive index
 		"""
 		if w0 is not None:
-			return self.Ω * dk_dw(w0=w0) - self.k_Ω
+			return self.Ω * self.dk_dw(w0=w0) - self.k_Ω
 		else:
 			return (
 				self.Ω[None, :] * self.dk_dw()[:, None] - 
@@ -178,8 +173,8 @@ class Dispersion():
 
 		k_Ω = self.k_Ω if not conj else -self.k_Ω
 		k_wΩ = w_Ω * n_wΩ / c_thz
-		k_diff = k_wΩ - self.k[:, None]
-		return k_diff - k_Ω[None, :]
+		k_diff = k_wΩ - self.k[:, None] - k_Ω[None, :]
+		return k_diff
 
 
 class Gaussian():
@@ -187,7 +182,7 @@ class Gaussian():
     Wave package with gaussian envelop, 
     propagating sinusoidially at carrier frequency
     """
-    def __init__(self, t_fwhm=1, w0=0, E0=1, Nw=2**10):
+    def __init__(self, t_fwhm=75e-3, w0=203, E0=5.4315e8, Nw=2**10):
         """
         t_fwhm  : full width at half maximum in time [ps]
         w0      : carrier frequency [THz]
