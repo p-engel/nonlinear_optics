@@ -24,15 +24,17 @@ k = (6.28318531e12)*(5.78013078e-09)  ## global absorption scaling factor
 base_dir = os.path.dirname(__file__)  # directory of this Python file
 fname = os.path.join(base_dir, '..', 'data', 'DSTMS_Optabsorption_cm-1.csv')
 fpath_n_opt = os.path.join(base_dir, '..', 'data', 'DSTMS_optical_refractve_index_nm.csv')
+fpath_ng = os.path.join(base_dir, '..', 'data', 'DSTMS_group-index_nm.csv')
 fname_alpha_opt = os.path.abspath(fname)
 fname_n_opt = os.path.abspath(fpath_n_opt)
+fname_ng = os.path.abspath(fpath_ng)
 
 ## parameters for seven Lorentz oscillators modeling refractive index in
 ## Optical region
 ## [ [w1, gam1, a1], [w2, gam2, a2],...[w7, gam7, a7] ]
 ## from data in ref:
 param_op = [
-    2.026,
+    2.0193,
     [1.51172213e+02, 2*1.00000000e+01, 5.26207870e+03],
     [1.65349167e+02, 2*4.81439707e+00, 1.81928019e+03],
     [1.71710164e+02, 2*2.00000000e+00, 9.97494678e+02],

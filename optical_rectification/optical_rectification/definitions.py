@@ -16,7 +16,7 @@ c = 299792458.0             # speed of light [m * Hz]
 c_thz = c * 1e-12           # speed of light [m * THz]
 TBP = 2*np.log(2) / np.pi   # time-bandwith product
 CHI2 = 428e-12              # [m / V]
-DEPTH = 0.4e-3              # crystal length [m]
+DEPTH = 0.3e-3              # crystal length [m]
 EPS0 = 8.85e-12  			# permitivity [C^2 / Kg^1 / m^3 /s^2]
 gam3PA = 0*6e-26				# [m^3/W^2] 3 photon absorption
 
@@ -63,17 +63,17 @@ class Index():
 			/ ( (w0**2 - self.w**2)**2 + (gam0**2)*(self.w**2) )
 		return f
 
-	def sellmeier(self, lam0=455, q=0.17):
+	def sellmeier(self, lam0=531.5, q=1.186):
 		"""
 		lam        : free space wavelength [nm]
 		-----
 		Return
 		n          : refractive index, 1d array [1]
 		"""
-		lam = np.sort( c_thz / self.w * 1e9 )                         # [nm]
+		lam = c_thz / self.w * 1e9                                 # [nm]
 		epsillon = (
 					self.n_inf**2 
-					+ (q * lam0**2) / (lam[::-1]**2 - lam0**2)
+					+ (q * lam0**2) / (lam**2 - lam0**2)
 		)
 		return np.sqrt(epsillon)
 
@@ -134,6 +134,19 @@ class Dispersion():
 		if w0 is not None: dk_dw = dk_dw[self.iw0(w0)]
 
 		return dk_dw
+    
+	def ng(self, w0=None):
+		"""group index"""
+		lam = c_thz / self.w * 1e9                             # [nm]
+		dn_dl = np.gradient(self.n, lam)
+		dn_df = np.gradient(self.n, self.w)
+# 		ng = n - (lam * dn_dl)
+		print(lam)
+		ng = self.n + ( self.w * dn_df )
+        
+# 		if w0 is not None: return ng[self.iw0(w0)]
+# 		else: return ng
+		return ng
 
 	def beta2(self, w0=None):
 		"""group velocity dispersion"""
@@ -154,9 +167,10 @@ class Dispersion():
 		if w0 is not None:
 			return self.Ω * self.dk_dw(w0=w0) - self.k_Ω
 		else:
-			return (
-				self.Ω[None, :] * self.dk_dw()[:, None] - 
-				self.k_Ω[None, :]
+			return self.Ω[None, :] / c_thz * (
+				self.ng()[:, None] - self.n_Ω[None, :]
+				# self.Ω[None, :] * self.dk_dw()[:, None] - 
+				# self.k_Ω[None, :]
 			)
 
 	def phase_match(self, conj=False):
@@ -191,7 +205,8 @@ class Gaussian():
         self.tau = np.sqrt(2) * (t_fwhm) / ( 2 * np.sqrt(np.log(2)) )
         self.delta = 2 / self.tau  # 1 / e width in frequency domain
         self.w0 = w0
-        self.w = np.linspace(w0 - 1*self.delta, w0 + 1*self.delta, Nw)   
+#         self.w = np.linspace(w0 - 2*self.delta, w0 + 2*self.delta, Nw)
+        self.w = np.linspace(150, 508, Nw)
         self.E0 = E0
         self.E0_w = E0 * np.sqrt(np.pi) * 2 / self.delta
         return
