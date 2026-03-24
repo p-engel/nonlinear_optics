@@ -190,32 +190,42 @@ class Gaussian():
     Wave package with gaussian envelop, 
     propagating sinusoidially at carrier frequency
     """
-    def __init__(self, t_fwhm=75e-3, w0=203, E0=5.4315e8, Nw=2**10):
+    def __init__(self, t_fwhm=75e-3, f0=203, E0=5.4315e8, Nw=2**10):
         """
         t_fwhm  : full width at half maximum in time [ps]
-        w0      : carrier frequency [THz]
+        f0      : carrier frequency [THz]
         E       : peak intensity in time [V/m]
         """
-        self.tau = np.sqrt(2) * (t_fwhm) / ( 2 * np.sqrt(np.log(2)) )
-        self.delta = 2 / self.tau  # 1 / e width in frequency domain
-        self.w0 = w0
-        self.w = np.linspace(w0 - 2*self.delta, w0 + 2*self.delta, Nw)
-#         self.w = np.linspace(150, 400, Nw)
+        self.tau = ( np.sqrt(2) 
+        			* t_fwhm 
+        			/ ( 2 * np.sqrt(np.log(2)) )
+        )
+        self.delta = 2 / self.tau                  # 1 / e width in freq.
+        self.w0 = 2 * np.pi * f0                   # [rad / ps]
+        self.w = np.linspace(
+        			self.w0 - 3*self.delta,
+        			self.w0 + 3*self.delta,
+        			Nw
+        )
+        self.detuning = self.w0 - self.w
         self.E0 = E0
-        self.E0_w = E0 * np.sqrt(np.pi) * 2 / self.delta
+        self.E0_w = ( E0 
+        			* np.sqrt(np.pi) 
+        			* 2 / self.delta
+        )
         return
     
     def field_t(self, t):
-        """ t - time 1d np array [s] """
-        E = self.E0 * np.exp( -1 * (np.array(t) / self.tau)**2 ) \
-            * np.exp( -1j*self.w0*np.array(t) )
+        """ t - time, 1d np array [s] """
+        E = self.E0 * ( 
+        	np.exp( -1 * (t / self.tau)**2 )
+            * np.exp( -1j * self.w0 * t )
+        )
         return E
 
     def field_w(self):
         E = self.E0_w * np.exp( -1 * 
-            ( 
-                2*np.pi * (self.w0 - self.w) / self.delta
-            )**2 
+            ( self.detuning / self.delta )**2 
         )
         return E
 
@@ -226,7 +236,7 @@ def chi2_factor(freq, k):
     freq : 1d array [THz]
     k    : 1d array, dispersion relation [1 / m]
     """
-    return 1 * CHI2 * freq**2 / (c_thz**2 * k)              # [1 / V]
+    return 1 * CHI2 * freq**2 / (c_thz**2 * k)          # [1 / V]
 
 def three_photon_loss(Ew, n):
     Iw = (n * EPS0 * c / 2) * np.abs(Ew)**2             # [W / m^2 * ps^2]
