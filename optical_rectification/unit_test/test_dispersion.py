@@ -2,43 +2,56 @@
 import numpy as np
 from matplotlib import pyplot as plt
 
-from optical_rectification.definitions import Index, Dispersion, c_thz, c,\
+from optical_rectification.definitions import Index, Dispersion, c_thz, \
 Gaussian
 
 def test_dispersion():
     # Ω = np.linspace(0, 10, 2**9) # [THz]
-    # w = np.linspace(115, 299, 2**9)  # [THz]
-    w0 = c_thz / 1468e-9  # [THz]
-    t_fwhm = 75e-15 * 1e12  # [ps]
-    E0 = 5.4315195283 * 1e8  # [V/m]
-    pulse = Gaussian(w0=w0, t_fwhm=t_fwhm, E0=E0, Nw=2**10)
-    w = pulse.w
-    dw = abs(w[1] - w[0])                     # freq per grid spacing
+    # w = np.linspace(115, 299, 2**9)               # [THz]
+    # w0 = c_thz / 1468e-9  # [THz]
+    # t_fwhm = 75e-15 * 1e12  # [ps]
+    # E0 = 5.4315195283 * 1e8  # [V/m]
+    pulse = Gaussian()
+    dw = abs(pulse.w[1] - pulse.w[0])                       # [rad/ps] per dps
     print(dw)
-    Ω_max = 12; m_dps = int(Ω_max / dw)
+    Ω_max = 2 * np.pi * 12;                                 # [rad/ps] 
+    m_dps = int(Ω_max / dw)                                 # [dps]
     NΩ = m_dps + 1
-    mvals = np.linspace(1, m_dps, NΩ); print(len(mvals))
+    mvals = np.linspace(1, m_dps, NΩ); 
+    print(len(mvals))
     Ω = mvals * dw
-    # w0 = 203
     index_Ω = Index(Ω)
     dispersion = Dispersion(
-                            w, Index(w).sellmeier(), 
-                            Ω=Ω, n_Ω=index_Ω.n()
+        pulse.w, Index(pulse.w).sellmeier(),
+        Ω=Ω, n_Ω=Index(Ω).n()
     )
     try:
-        f = dispersion.k * (c_thz / dispersion.n)
-        cond = np.mean( np.abs(f - w) ) <= 1e-2;
-        cond1 = np.shape( dispersion.deltak(w0=w0) ) == np.shape(Ω)
-        cond2 = np.shape( dispersion.phase_match() ) == (len(w), len(Ω))
-        assert cond, "the dispersion relation should satisfy \
-                        w = k * nu"
-        assert cond1, "∆k the phase matching condition \
-                        is approximated as ∆k(Ω) and thus has Dim(Ω)"
-        assert cond2, "∆k the phase matching condition has Dim(w) by Dim(Ω)"
+        w = dispersion.k * (c_thz / dispersion.n)
+        cond = np.mean(
+            np.abs( w - pulse.w )
+        ) <= 1e-2;
+        cond1 = np.shape(
+            dispersion.deltak(w0=w0)
+        ) == np.shape(Ω)
+        cond2 = np.shape(
+            dispersion.phase_match()
+        ) == (len(w), len(Ω))
+        assert cond, (
+            "the dispersion relation should satisfy "
+            "w = k * nu"
+        )
+        assert cond1, (
+            "∆k the phase matching condition "
+            "is approximated as ∆k(Ω) and thus has Dim(Ω)"
+        )
+        assert cond2, (
+            "∆k the phase matching condition has "
+            "Dim(w) by Dim(Ω)"
+        )
     except AssertionError as a:
         print(f"Assertion error: {a}");
 
-    return w0, w, Ω, dispersion
+    return pulse.w0, pulse.w, Ω, dispersion
 
 # # plot dispersion relation
 # fig, ax1 = plt.subplots(figsize=(6.4,4.8))

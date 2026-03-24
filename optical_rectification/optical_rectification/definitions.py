@@ -111,13 +111,13 @@ class Index():
 
 class Dispersion():
 	"""
-	dispersion relation for optical rectification (OR)
+	dispersion relation for optical rectification (OR)     [rad/m]
 	"""
 	def __init__(self, w, n, Ω=[1e-9], n_Ω=[1e-9]):
 		"""
-		w       : frequency domain of input optical pulse  [THz]
-		n(w)    : refractive index in medium
-		Ω       : terahertz domain  Ω << w  [THz]
+		w       : frequency domain of input optical pulse  [rad/ps]
+		n(w)    : refractive index in medium               [1]
+		Ω       : terahertz domain  Ω << w
 		n_Ω     : n(Ω)
 		"""
 		self.w = np.array(w); self.Ω = np.array(Ω)
@@ -137,8 +137,8 @@ class Dispersion():
     
 	def ng(self, w0=None):
 		"""group index"""
-		dn_df = np.gradient(self.n, self.w)
-		ng = self.n + ( self.w * dn_df )
+		dn_dw = np.gradient(self.n, self.w)
+		ng = self.n + ( self.w * dn_dw )
         
 		return ng
 
@@ -163,8 +163,6 @@ class Dispersion():
 		else:
 			return self.Ω[None, :] / c_thz * (
 				self.ng()[:, None] - self.n_Ω[None, :]
-				# self.Ω[None, :] * self.dk_dw()[:, None] - 
-				# self.k_Ω[None, :]
 			)
 
 	def phase_match(self, conj=False):
@@ -179,7 +177,7 @@ class Dispersion():
 
 		n_wΩ = Index(w_Ω, param=par.param_op, k=1).sellmeier()
 
-		k_Ω = self.k_Ω if not conj else -self.k_Ω
+		k_Ω = self.k_Ω if not conj else (-1  * self.k_Ω)
 		k_wΩ = w_Ω * n_wΩ / c_thz
 		k_diff = k_wΩ - self.k[:, None] - k_Ω[None, :]
 		return k_diff
@@ -216,7 +214,7 @@ class Gaussian():
         return
     
     def field_t(self, t):
-        """ t - time, 1d np array [s] """
+        """ t - time, 1d np array [ps] """
         E = self.E0 * ( 
         	np.exp( -1 * (t / self.tau)**2 )
             * np.exp( -1j * self.w0 * t )
