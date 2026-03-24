@@ -10,14 +10,10 @@ EPS0 = 8.85e-12                         # [C^2 / Kg^1 / m^3 /s^2]
 def test_gaussian():
     try:
         pulse = Gaussian()
-        # sigma = 1 / np.sqrt(2) * pulse.delta
-        # w = np.linspace( (w0 - sigma), (w0 + sigma), 2**11 )
         E_w = pulse.field_w()
         E_peak = pulse.E0_w
         I_peak = (EPS0*c/2) * np.abs(E_peak)**2
         I_w = (EPS0*c/2) * np.abs(E_w)**2
-        # I_peak = np.abs(E_peak)**2
-        # I_w = np.abs(E_w)**2
         
         ind_fwhm = abs(1/2 - I_w/I_peak) < 1.2e-3
         w_fwhm = abs( 
