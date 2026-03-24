@@ -1,21 +1,5 @@
 from scipy.integrate import solve_ivp
 from .propagator import ORPropagator
-from .definitions import Gaussian 
-
-# def or_simulation(
-#     w0: float = 203,        # [THz]
-#     t_fwhm: float = 75e-3,  # [ps]
-#     E0: float = 5.4315e8,   # [V/m]
-#     Ω_max: int = 10,        # [THz]
-#     NΩ: int = 300,
-#     depth: float = 1e-3,    # [m]
-#     Nz: int = 200,
-#     cascade=True
-# ):
-    # # --- initial pulse ---
-    # pulse = Gaussian(t_fwhm=t_fwhm, w0=w0, E0=E0)
-
-    # model = ORPropagator(pulse, Ω_max, NΩ, cascade=cascade)
 
 def or_simulation(model: ORPropagator):
     # --- propagation ---

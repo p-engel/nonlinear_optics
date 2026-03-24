@@ -16,7 +16,7 @@ c = 299792458.0             # speed of light [m * Hz]
 c_thz = c * 1e-12           # speed of light [m * THz]
 TBP = 2*np.log(2) / np.pi   # time-bandwith product
 CHI2 = 428e-12              # [m / V]
-DEPTH = 0.3e-3              # crystal length [m]
+DEPTH = 0.37e-3              # crystal length [m]
 EPS0 = 8.85e-12  			# permitivity [C^2 / Kg^1 / m^3 /s^2]
 gam3PA = 0*6e-26				# [m^3/W^2] 3 photon absorption
 
@@ -63,7 +63,7 @@ class Index():
 			/ ( (w0**2 - self.w**2)**2 + (gam0**2)*(self.w**2) )
 		return f
 
-	def sellmeier(self, lam0=531.5, q=1.186):
+	def sellmeier(self, lam0=532, q=1.45):
 		"""
 		lam        : free space wavelength [nm]
 		-----
@@ -137,15 +137,9 @@ class Dispersion():
     
 	def ng(self, w0=None):
 		"""group index"""
-		lam = c_thz / self.w * 1e9                             # [nm]
-		dn_dl = np.gradient(self.n, lam)
 		dn_df = np.gradient(self.n, self.w)
-# 		ng = n - (lam * dn_dl)
-		print(lam)
 		ng = self.n + ( self.w * dn_df )
         
-# 		if w0 is not None: return ng[self.iw0(w0)]
-# 		else: return ng
 		return ng
 
 	def beta2(self, w0=None):
@@ -205,8 +199,8 @@ class Gaussian():
         self.tau = np.sqrt(2) * (t_fwhm) / ( 2 * np.sqrt(np.log(2)) )
         self.delta = 2 / self.tau  # 1 / e width in frequency domain
         self.w0 = w0
-#         self.w = np.linspace(w0 - 2*self.delta, w0 + 2*self.delta, Nw)
-        self.w = np.linspace(150, 508, Nw)
+        self.w = np.linspace(w0 - 2*self.delta, w0 + 2*self.delta, Nw)
+#         self.w = np.linspace(150, 400, Nw)
         self.E0 = E0
         self.E0_w = E0 * np.sqrt(np.pi) * 2 / self.delta
         return
@@ -232,7 +226,7 @@ def chi2_factor(freq, k):
     freq : 1d array [THz]
     k    : 1d array, dispersion relation [1 / m]
     """
-    return CHI2 * freq**2 / (c_thz**2 * k)              # [1 / V]
+    return 1 * CHI2 * freq**2 / (c_thz**2 * k)              # [1 / V]
 
 def three_photon_loss(Ew, n):
     Iw = (n * EPS0 * c / 2) * np.abs(Ew)**2             # [W / m^2 * ps^2]
@@ -264,14 +258,14 @@ class Chi2_mixing():
                 max_m = min(self.NΩ, self.Nw - l)
                 K[l, :max_m] = self.Ew[l : l + max_m]
             
-            K *= np.exp(-1j * self.z * self.Dk_up)
+            K *= np.exp(-2j*np.pi * self.z * self.Dk_up)
 
         elif mode == "diff":
             for l in range(self.Nw):
                 max_m = min(self.NΩ, l + 1)                         # Ω ≤ ω
                 K[l, :max_m] = self.Ew[l::-1][:max_m]
             
-            K *= np.exp(-1j * self.z * self.Dk_dwn)
+            K *= np.exp(-2j*np.pi * self.z * self.Dk_dwn)
 
         else:
             raise ValueError("mode must be 'sum' or 'diff'")

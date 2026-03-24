@@ -21,8 +21,6 @@ def conversion_efficiency(
     output = run.or_simulation(model)
 
     return (
-        1 - (
-            optical_energy(output["Ew"], model.dw) 
-            / optical_energy(pulse.field_w(), model.dw)
-        )
+        optical_energy(output["EΩ"], model.dw) 
+        / optical_energy(pulse.field_w(), model.dw)
     )
