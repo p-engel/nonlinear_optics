@@ -6,13 +6,11 @@ from optical_rectification import definitions, par
 
 #Initialize index variables
 w = np.linspace(2*np.pi*0.01, 2*np.pi*3, 2**9)  # [rad/s]
-Index = definitions.Index(w,
-            par.param[1:][0], 2*par.param[1:][1], par.param[1:][0],
-            par.param[0], par.k)
+Index = definitions.Index(w, param=par.p, s=par.s)
 
 def test_lorentzpdf():
     # parameters
-    p = par.param[1]; w0 = p[0]; gam0 = 2*p[1];
+    w0 = par.oscillators[0]; gam0 = par.oscillators[1]
     pdf = Index.lorentz(w0, gam0);
 
     try:

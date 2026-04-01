@@ -12,13 +12,13 @@ OR Simulation with consistent scaling
 - Uses SciPy Runge-Kutta (solve_ivp)
 """
 # constants
-c = 299792458.0             # speed of light [m * Hz]
-c_thz = c * 1e-12           # speed of light [m * THz]
+c = 299792458.0             # speed of light [m / s]
+c_thz = c * 1e-12           # speed of light [m / ps]
 TBP = 2*np.log(2) / np.pi   # time-bandwith product
 CHI2 = 428e-12              # [m / V]
-DEPTH = 0.37e-3              # crystal length [m]
-EPS0 = 8.85e-12  			# permitivity [C^2 / Kg^1 / m^3 /s^2]
-gam3PA = 0*6e-26				# [m^3/W^2] 3 photon absorption
+DEPTH = 0.37e-3             # crystal length [m]
+EPS0 = 8.85e-12  			# permitivity [C^2 / Kg^1 / m^3 * s^2]
+gam3PA = 0*6e-26			# [m^3/W^2] 3 photon absorption
 
 
 class Index():
@@ -26,30 +26,26 @@ class Index():
 	Refractive index n(ω) and absorption α(ω) 
 	with Lorentz model.
 	"""
-	def __init__(self, w, param=None, k=None):
+	def __init__(self, w, param=None, s=None):
 		"""
 		Parameters
 		----------
-		w : np 1d array 
-			free space wavelength or frequency
-		w0 : np 1d array
-			resonant frequencies for n oscillators [Hz]
-		gam0 : np 1d array
-			damping rates for n oscillators [Hz]
-		a : np 1d array
-			oscillator strenght for n oscillators [Hz^2]
-		n_inf : float
-			real index value at infinity [1]
-		k : float
-			global absorption scaling factor [1/(Hz*mm) ?]
+		w     : 1d array, frequency grid
+		param : tuple, (1 + 3*N,)
+				n_inf, w0_1, gam0_1, a_1, ..., w0_N, gam0_N, a_N
+					n_inf, real index value at infinity [1]
+					w0_n, resonant frequency [rad/ps]
+					gam0_n, damping rate [rad/ps]
+					a_n, oscillator strength [(rad/ps)^2]
+		s     : scaling factor [1 / (rad/ps * m)]
 		"""
-		self.w = w;
-		self.p = par.param_thz if param is None else param
-		self.n_inf = self.p[0]
-		self.w0 = np.array( [pi[0] for pi in self.p[1:]] )
-		self.gam0 = np.array( [pi[1] for pi in self.p[1:]] )
-		self.a = np.array( [pi[2] for pi in self.p[1:]] )
-		self.k = par.k if k is None else k
+		self.w = np.array(w)
+		self.n_inf = float(param[0])
+		self.osc_params = np.array(param)[1:].reshape(-1, 3)
+		self.w0 = self.osc_params[:, 0]
+		self.gam0 = self.osc_params[:, 1]
+		self.a = self.osc_params[:, 2]
+		self.s = s
 		self.n_osc = len(self.w0)
 
 	def lorentz(self, w0, gam0):
@@ -103,7 +99,7 @@ class Index():
 		"""
 		alpha = np.zeros_like(self.w, dtype=float)
 		for i in range(self.n_osc):
-			imag_part = self.k * self.a[i]
+			imag_part = self.s * self.a[i]
 			alpha += imag_part * self.lorentz(self.w0[i], self.gam0[i])
 
 		return alpha

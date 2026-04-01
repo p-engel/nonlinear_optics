@@ -15,7 +15,7 @@ class ORPropagator:
         ) * self.dw
 
         self.index_w = Index(
-            pulse.w, param=par.param_op, k=1
+            pulse.w, param=par.param_op
         )
         self.index_Ω = Index(
             self.Ω, param=par.param_thz

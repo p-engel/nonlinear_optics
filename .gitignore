@@ -12,7 +12,6 @@ strong_coupling/__pycache__/
 strong_coupling/graph_FPresonance.py
 optical_rectification/optical_rectification/draft
 .DS_Store
-optical_rectification/data/DSTMS_optical_absorption_nm-cm-1.csv
-optical_rectification/data/DSTMS_group-index_nm.csv
+optical_rectification/data/
 optical_rectification/multiphoton_absorption.pdf
 optical_rectification/oe-29-14-22494.pdf
