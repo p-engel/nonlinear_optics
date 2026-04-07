@@ -1,11 +1,11 @@
 # propagator.py
-from numpy import linspace, zeros_like, concatenate
+from numpy import linspace, zeros_like, concatenate, pi
 from . import par
 from .definitions import three_photon_loss, chi2_factor, Chi2_mixing, \
 Dispersion, Index, DEPTH
 
 class ORPropagator:
-    def __init__(self, pulse, Ω_max=12, cascade=True):
+    def __init__(self, pulse, Ω_max=2*pi*10, cascade=True):
         self.dw = abs(pulse.w[1] - pulse.w[0])          # freq per step/spacing
         self.m_dps = int(Ω_max / self.dw)               # no. of steps
         self.Nw = len(pulse.w)
@@ -15,11 +15,9 @@ class ORPropagator:
         ) * self.dw
 
         self.index_w = Index(
-            pulse.w, param=par.param_op
+            pulse.w, param=par.p2, s=par.s2
         )
-        self.index_Ω = Index(
-            self.Ω, param=par.param_thz
-        )
+        self.index_Ω = Index(self.Ω)
 
         self.dispersion = Dispersion(
             pulse.w, self.index_w.sellmeier(), 
@@ -58,8 +56,8 @@ class ORPropagator:
             Ew, self.dw, self.NΩ,
             Dk_up=self.dispersion.phase_match(),
             Dk_dwn=self.dispersion.phase_match(conj=True),
-            # Dk_up=self.dispersion.deltak(),
-            # Dk_dwn=-self.dispersion.deltak(),
+#             Dk_up=self.dispersion.deltak(),
+#             Dk_dwn=-self.dispersion.deltak(),
             z=z
         )
 
@@ -71,7 +69,7 @@ class ORPropagator:
         # --- optical field ode ---
         dEw = -0.5 * (
             self.index_w.alpha() 
-            + three_photon_loss(Ew, self.index_w.n())
+            + 0*three_photon_loss(Ew, self.index_w.n())
             - 1j * self.field_dispersion
         ) * Ew
         if self.cascade:

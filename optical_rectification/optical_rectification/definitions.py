@@ -26,7 +26,7 @@ class Index():
 	Refractive index n(ω) and absorption α(ω) 
 	with Lorentz model.
 	"""
-	def __init__(self, w, param=None, s=None):
+	def __init__(self, w, param=par.p, s=par.s):
 		"""
 		Parameters
 		----------
@@ -66,7 +66,7 @@ class Index():
 		Return
 		n          : refractive index, 1d array [1]
 		"""
-		lam = c_thz / self.w * 1e9                                 # [nm]
+		lam = 2*np.pi * c_thz / self.w * 1e9                                 # [nm]
 		epsillon = (
 					self.n_inf**2 
 					+ (q * lam0**2) / (lam**2 - lam0**2)
@@ -95,7 +95,7 @@ class Index():
 		Return
 		------
 		alpha : np 1d array
-			imaginary refractive index α(ω) [1/mm]
+			imaginary refractive index α(ω) [1/m]
 		"""
 		alpha = np.zeros_like(self.w, dtype=float)
 		for i in range(self.n_osc):
@@ -171,7 +171,7 @@ class Dispersion():
 		if not conj: w_Ω = self.w[:, None] + self.Ω[None, :]
 		else: w_Ω = self.w[:, None] - self.Ω[None, :]
 
-		n_wΩ = Index(w_Ω, param=par.param_op, k=1).sellmeier()
+		n_wΩ = Index(w_Ω, param=par.p2, s=par.s2).sellmeier()
 
 		k_Ω = self.k_Ω if not conj else (-1  * self.k_Ω)
 		k_wΩ = w_Ω * n_wΩ / c_thz
@@ -197,8 +197,8 @@ class Gaussian():
         self.delta = 2 / self.tau                  # 1 / e width in freq.
         self.w0 = 2 * np.pi * f0                   # [rad / ps]
         self.w = np.linspace(
-        			self.w0 - 3*self.delta,
-        			self.w0 + 3*self.delta,
+        			self.w0 - 2*np.pi*self.delta,
+        			self.w0 + 2*np.pi*self.delta,
         			Nw
         )
         self.detuning = self.w0 - self.w
@@ -218,19 +218,19 @@ class Gaussian():
         return E
 
     def field_w(self):
-        E = self.E0_w * np.exp( -1 * 
-            ( self.detuning / self.delta )**2 
+        E = self.E0_w * np.exp(
+            -1 * ( self.detuning / self.delta )**2 
         )
         return E
 
 
-def chi2_factor(freq, k):
+def chi2_factor(w, k):
     """
     Second-order nonlinear mixing
-    freq : 1d array [THz]
-    k    : 1d array, dispersion relation [1 / m]
+    freq : 1d array [rad/ps]
+    k    : 1d array, dispersion relation [rad / m]
     """
-    return 1 * CHI2 * freq**2 / (c_thz**2 * k)          # [1 / V]
+    return CHI2 * w**2 / (c_thz**2 * k)          # [1 / V]
 
 def three_photon_loss(Ew, n):
     Iw = (n * EPS0 * c / 2) * np.abs(Ew)**2             # [W / m^2 * ps^2]
@@ -238,7 +238,7 @@ def three_photon_loss(Ew, n):
 
 
 class Chi2_mixing():
-    def __init__(self, E_opt, domega, NΩ, Dk_up=1, Dk_dwn=1, z=0.0):
+    def __init__(self, E_opt, domega, NΩ, Dk_up=2*np.pi, Dk_dwn=2*np.pi, z=0.0):
         self.Ew = E_opt
         self.dw = domega
         self.Dk_up = Dk_up
@@ -262,14 +262,14 @@ class Chi2_mixing():
                 max_m = min(self.NΩ, self.Nw - l)
                 K[l, :max_m] = self.Ew[l : l + max_m]
             
-            K *= np.exp(-2j*np.pi * self.z * self.Dk_up)
+            K *= np.exp(-1j * self.z * self.Dk_up)
 
         elif mode == "diff":
             for l in range(self.Nw):
                 max_m = min(self.NΩ, l + 1)                         # Ω ≤ ω
                 K[l, :max_m] = self.Ew[l::-1][:max_m]
             
-            K *= np.exp(-2j*np.pi * self.z * self.Dk_dwn)
+            K *= np.exp(-1j * self.z * self.Dk_dwn)
 
         else:
             raise ValueError("mode must be 'sum' or 'diff'")

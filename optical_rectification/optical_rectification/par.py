@@ -44,22 +44,23 @@ param2_thz = [
 ]
 param2_radps = [param2_thz[0]] + [
     [ 
-        2*pi * oscillator[0], 
-        2*pi * oscillator[1], 
-        (2*pi)**2 * oscillator[2]
+        2*pi * osc[0], 
+        2*pi * osc[1], 
+        (2*pi)**2 * osc[2]
     ]
-    for oscillator in param2_thz[1:]
+    for osc in param2_thz[1:]
 ]
 ninf2 = param2_radps[0]
 oscillators2 = array(param2_radps[1:]).flatten()
 p2 = concatenate(([ninf2], oscillators2))
+s2 = 9.34145391e-01 / (2*pi)
 
-# # Optical absorption spectrum from data in ref
-# # filepath
-# base_dir = os.path.dirname(__file__)  # directory of this Python file
-# fname = os.path.join(base_dir, '..', 'data', 'DSTMS_Optabsorption_cm-1.csv')
-# fpath_n_opt = os.path.join(base_dir, '..', 'data', 'DSTMS_optical_refractve_index_nm.csv')
-# fpath_ng = os.path.join(base_dir, '..', 'data', 'DSTMS_group-index_nm.csv')
-# fname_alpha_opt = os.path.abspath(fname)
-# fname_n_opt = os.path.abspath(fpath_n_opt)
-# fname_ng = os.path.abspath(fpath_ng)
+# Optical absorption spectrum from data in ref
+# filepath
+base_dir = os.path.dirname(__file__)  # directory of this Python file
+fname = os.path.join(base_dir, '..', 'data', 'DSTMS_optical_absorption_nm-cm-1.csv')
+fpath_n_opt = os.path.join(base_dir, '..', 'data', 'DSTMS_optical_refractve_index_nm.csv')
+fpath_ng = os.path.join(base_dir, '..', 'data', 'DSTMS_group-index_nm.csv')
+fname_alpha_opt = os.path.abspath(fname)
+fname_n_opt = os.path.abspath(fpath_n_opt)
+fname_ng = os.path.abspath(fpath_ng)
