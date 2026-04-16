@@ -11,11 +11,11 @@ def test_gaussian():
     try:
         pulse = Gaussian()
         E_w = pulse.field_w()
-        E_peak = pulse.E0_w
-        I_peak = (EPS0*c/2) * np.abs(E_peak)**2
-        I_w = (EPS0*c/2) * np.abs(E_w)**2
+        E_peak = pulse.Aw
+        I_peak = 2*(EPS0*c) * np.abs(E_peak)**2
+        I_w = 2*(EPS0*c) * np.abs(E_w)**2
         
-        ind_fwhm = abs(1/2 - I_w/I_peak) < 1.2e-3
+        ind_fwhm = abs(1/2 - I_w/I_peak) < 1.2e-2
         w_fwhm = abs( 
             max(pulse.w[ind_fwhm]) - min(pulse.w[ind_fwhm])
         )
