@@ -9,11 +9,11 @@ def optical_energy(Ew, dw): return sum( abs(Ew)**2 ) * dw
 def conversion_efficiency(
     f0: float = 203,        # [THz]
     t_fwhm: float = 75e-3,  # [ps]
-    E0: float = 5.4315e8,   # [V/m]
+    A: float = 5.4315e8,   # [V/m]
     cascade=True
 ):
     # --- initial pulse ---
-    pulse = Gaussian(t_fwhm=t_fwhm, f0=f0, E0=E0)
+    pulse = Gaussian(t_fwhm=t_fwhm, f0=f0, A=A)
 
     # --- OR propagator model ---
     model = ORPropagator(pulse, cascade=cascade)
