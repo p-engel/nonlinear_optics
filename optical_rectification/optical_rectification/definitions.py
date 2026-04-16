@@ -82,12 +82,16 @@ class Index():
 		"""
 		n = np.full_like(self.w, self.n_inf, dtype=float)
 		for i in range(self.n_osc):
-			real_part = (
-				self.a[i] * ( self.w0[i]**2 - self.w**2 ) 
-				/ ( self.gam0[i]*(self.w**2) )
+# 			real_part = (
+# 				self.a[i] * ( self.w0[i]**2 - self.w**2 ) 
+# 				/ ( self.gam0[i]*(self.w**2) )
+# 			)
+# 			n += real_part * self.lorentz(self.w0[i], self.gam0[i])
+			denom = (
+				(self.w0[i]**2 - self.w**2)**2 + (self.gam0[i]**2) 
+				* (self.w**2)
 			)
-			n += real_part * self.lorentz(self.w0[i], self.gam0[i])
-
+			n += self.a[i] * (self.w0[i]**2 - self.w**2) / denom
 		return n
 
 	def alpha(self):
@@ -109,13 +113,14 @@ class Dispersion():
 	"""
 	dispersion relation for optical rectification (OR)     [rad/m]
 	"""
-	def __init__(self, w, n, Ω=[1e-9], n_Ω=[1e-9]):
+	def __init__(self, w0, w, n, Ω=[1e-9], n_Ω=[1e-9]):
 		"""
 		w       : frequency domain of input optical pulse  [rad/ps]
 		n(w)    : refractive index in medium               [1]
 		Ω       : terahertz domain  Ω << w
 		n_Ω     : n(Ω)
 		"""
+		self.w0 = w0
 		self.w = np.array(w); self.Ω = np.array(Ω)
 		self.n = np.array(n); self.n_Ω = np.array(n_Ω)
 		self.k = self.w * self.n / c_thz
@@ -127,24 +132,33 @@ class Dispersion():
 		"""inverse group velocity of input pulse"""
 		dk_dw = np.gradient(self.k, self.w)
 
-		if w0 is not None: dk_dw = dk_dw[self.iw0(w0)]
+		if w0 is not None:
+			return dk_dw[self.iw0(w0)]
+		else:
+			return dk_dw
 
-		return dk_dw
-    
 	def ng(self, w0=None):
 		"""group index"""
 		dn_dw = np.gradient(self.n, self.w)
 		ng = self.n + ( self.w * dn_dw )
-        
+
 		return ng
 
 	def beta2(self, w0=None):
 		"""group velocity dispersion"""
 		beta2 = np.gradient(self.dk_dw(), self.w)
 
-		if w0 is not None: beta2 = beta2[self.iw0(w0)]
-
-		return beta2
+		if w0 is not None: 
+			return beta2[self.iw0(w0)]
+		else: 
+			return beta2
+        
+	def gvd(self):
+		return (
+			self.beta2(w0=self.w0)
+			* (self.w0  - self.w)**2
+		)
+		return self.k - k_gvd
 
 	def deltak(self, w0=None):
 		"""
@@ -184,11 +198,14 @@ class Gaussian():
     Wave package with gaussian envelop, 
     propagating sinusoidially at carrier frequency
     """
-    def __init__(self, t_fwhm=75e-3, f0=203, E0=5.4315e8, Nw=2**10):
+    def __init__(
+    	self, t_fwhm=75e-3, f0=203, 
+    	A=5.4315e8, Nw=2**10
+    ):
         """
         t_fwhm  : full width at half maximum in time [ps]
         f0      : carrier frequency [THz]
-        E       : peak intensity in time [V/m]
+        A       : peak field amplitude E0/2 [V/m]
         """
         self.tau = ( np.sqrt(2) 
         			* t_fwhm 
@@ -197,48 +214,49 @@ class Gaussian():
         self.delta = 2 / self.tau                  # 1 / e width in freq.
         self.w0 = 2 * np.pi * f0                   # [rad / ps]
         self.w = np.linspace(
-        			self.w0 - 2*np.pi*self.delta,
-        			self.w0 + 2*np.pi*self.delta,
+        			self.w0 - 5.3*np.pi*self.delta,
+        			self.w0 + 3.5*np.pi*self.delta,
         			Nw
         )
         self.detuning = self.w0 - self.w
-        self.E0 = E0
-        self.E0_w = ( E0 
-        			* np.sqrt(np.pi) 
-        			* 2 / self.delta
-        )
+        self.A = A
+        self.Aw = np.sqrt(2)*A / self.delta
         return
-    
+
     def field_t(self, t):
         """ t - time, 1d np array [ps] """
-        E = self.E0 * ( 
-        	np.exp( -1 * (t / self.tau)**2 )
+        E = self.A * ( 
+            np.exp( -1 * (t / self.tau)**2 )
             * np.exp( -1j * self.w0 * t )
         )
         return E
 
     def field_w(self):
-        E = self.E0_w * np.exp(
+        E = self.Aw * np.exp(
             -1 * ( self.detuning / self.delta )**2 
         )
         return E
 
 
-def chi2_factor(w, k):
+def chi2_factor(w, n):
     """
     Second-order nonlinear mixing
     freq : 1d array [rad/ps]
     k    : 1d array, dispersion relation [rad / m]
     """
-    return CHI2 * w**2 / (c_thz**2 * k)          # [1 / V]
-
+    # CHI2 * w**2 / (c_thz**2 * k)
+    return CHI2 * w / (c_thz * n)                       # [1 / V]
+        
 def three_photon_loss(Ew, n):
     Iw = (n * EPS0 * c / 2) * np.abs(Ew)**2             # [W / m^2 * ps^2]
     return gam3PA * Iw**2                               # []
 
 
 class Chi2_mixing():
-    def __init__(self, E_opt, domega, NΩ, Dk_up=2*np.pi, Dk_dwn=2*np.pi, z=0.0):
+    def __init__(
+    	self, E_opt, domega, NΩ, 
+    	Dk_up=2*np.pi, Dk_dwn=-2*np.pi, z=0.0
+    ):
         self.Ew = E_opt
         self.dw = domega
         self.Dk_up = Dk_up
@@ -261,14 +279,14 @@ class Chi2_mixing():
             for l in range(self.Nw):
                 max_m = min(self.NΩ, self.Nw - l)
                 K[l, :max_m] = self.Ew[l : l + max_m]
-            
+
             K *= np.exp(-1j * self.z * self.Dk_up)
 
         elif mode == "diff":
             for l in range(self.Nw):
                 max_m = min(self.NΩ, l + 1)                         # Ω ≤ ω
                 K[l, :max_m] = self.Ew[l::-1][:max_m]
-            
+
             K *= np.exp(-1j * self.z * self.Dk_dwn)
 
         else:
@@ -279,7 +297,8 @@ class Chi2_mixing():
     def correlation(self):
         """Integrates K(ω, Ω) with E*(ω) over w"""
         return self.dw * np.sum(
-            self.kernel(mode="sum") * np.conjugate(self.Ew)[:, None], 
+            self.kernel(mode="sum") 
+            * np.conjugate(self.Ew)[:, None], 
             axis=0
         )
 
@@ -289,6 +308,6 @@ class Chi2_mixing():
         Kdwn = self.kernel(mode="diff")
 
         return self.dw * (
-            np.sum(Kup * np.conjugate(E_thz[None, :]), axis=1) +
-            np.sum(Kdwn * E_thz[None, :], axis=1)
+            np.sum(Kup * np.conjugate(E_thz[None, :]), axis=1)
+            + np.sum(Kdwn * E_thz[None, :], axis=1)
         )
