@@ -15,10 +15,12 @@ OR Simulation with consistent scaling
 c = 299792458.0             # speed of light [m / s]
 c_thz = c * 1e-12           # speed of light [m / ps]
 TBP = 2*np.log(2) / np.pi   # time-bandwith product
-CHI2 = 428e-12              # [m / V]
+# CHI2 = 428e-12            # [m / V]
+CHI2 = 320e-12
 DEPTH = 0.37e-3             # crystal length [m]
-EPS0 = 8.85e-12  			# permitivity [C^2 / Kg^1 / m^3 * s^2]
-gam3PA = 0*6e-26			# [m^3/W^2] 3 photon absorption
+EPS0 = 8.85e-12  			# permitivity [F/m]
+Z0 = 1 / (c * EPS0)         # free space impedance [V/A]
+# gam3PA = 0*6e-26			# [m^3/W^2] 3 photon absorption
 
 
 class Index():
@@ -88,8 +90,8 @@ class Index():
 # 			)
 # 			n += real_part * self.lorentz(self.w0[i], self.gam0[i])
 			denom = (
-				(self.w0[i]**2 - self.w**2)**2 + (self.gam0[i]**2) 
-				* (self.w**2)
+				( self.w0[i]**2 - self.w**2 )**2
+                + ( self.gam0[i] * self.w )**2
 			)
 			n += self.a[i] * (self.w0[i]**2 - self.w**2) / denom
 		return n
@@ -168,26 +170,26 @@ class Dispersion():
 					Ω [1/nu_g - 1/nu_Ω] = Ω/c [ng - n_Ω]
 					where n is the refractive index
 		"""
-		if w0 is not None:
-			return self.Ω * self.dk_dw(w0=w0) - self.k_Ω
-		else:
+		if w0 is None:
 			return self.Ω[None, :] / c_thz * (
 				self.ng()[:, None] - self.n_Ω[None, :]
 			)
+		else:
+			return self.Ω * self.dk_dw(w0=self.w0) - self.k_Ω
 
-	def phase_match(self, conj=False):
+	def phase_match(self, plus_branch=True):
 		"""
 		----
 		Return
 		∆k(w, Ω)   : exact OR phase matching condition
 					k(w + Ω) - k(w) - k(Ω)
 		"""
-		if not conj: w_Ω = self.w[:, None] + self.Ω[None, :]
+		if plus_branch: w_Ω = self.w[:, None] + self.Ω[None, :]
 		else: w_Ω = self.w[:, None] - self.Ω[None, :]
 
 		n_wΩ = Index(w_Ω, param=par.p2, s=par.s2).sellmeier()
 
-		k_Ω = self.k_Ω if not conj else (-1  * self.k_Ω)
+		k_Ω = self.k_Ω if plus_branch else (-1  * self.k_Ω)
 		k_wΩ = w_Ω * n_wΩ / c_thz
 		k_diff = k_wΩ - self.k[:, None] - k_Ω[None, :]
 		return k_diff
@@ -196,44 +198,76 @@ class Dispersion():
 class Gaussian():
     """
     Wave package with gaussian envelop, 
-    propagating sinusoidially at carrier frequency
+    propagating sinusoidially at carrier frequency f0
     """
     def __init__(
-    	self, t_fwhm=75e-3, f0=203, 
-    	A=5.4315e8, Nw=2**10
+    	self, 
+        t_fwhm=75e-3,
+        f0=204, 
+    	r_fwhm=2e-3, 
+        E=181e-6,
+        Nw=2**10
     ):
         """
-        t_fwhm  : full width at half maximum in time [ps]
+        t_fwhm  : FWHM in time [ps]
         f0      : carrier frequency [THz]
-        A       : peak field amplitude E0/2 [V/m]
+        r_fwhm  : FWHM of focused dbeam waist [m]
+        E       : pulse energy
         """
-        self.tau = ( np.sqrt(2) 
-        			* t_fwhm 
-        			/ ( 2 * np.sqrt(np.log(2)) )
-        )
-        self.delta = 2 / self.tau                  # 1 / e width in freq.
-        self.w0 = 2 * np.pi * f0                   # [rad / ps]
+        # pulse profile parameters
+        self.tau = t_fwhm / np.sqrt( 2 * np.log(2) )
+        self.delta = 2 / self.tau                                   # 1 / e width in freq.
+        self.w0 = 2 * np.pi * f0                                    # [rad / ps]
+        self.k0 = self.w0 / c_thz                                   # [rad / m]
+        self.lam0 = 2*np.pi / self.k0
         self.w = np.linspace(
         			self.w0 - 5.3*np.pi*self.delta,
         			self.w0 + 3.5*np.pi*self.delta,
         			Nw
         )
         self.detuning = self.w0 - self.w
-        self.A = A
-        self.Aw = np.sqrt(2)*A / self.delta
-        return
 
-    def field_t(self, t):
+        self.peak_power = E / (
+            self.tau*1e-12 * np.sqrt(np.pi / 2)
+        )                                                           # [W]
+
+        # spatial profile parameters
+        self.waist0 = r_fwhm / np.sqrt( 2 * np.log(2)  )
+        self.zR = np.pi * self.waist0**2 / self.lam0
+        # self.A = A
+        # self.Aw = np.sqrt(2)*A / self.delta
+
+    def amplitude(self, r, z):
+        z = np.atleast_1d(z).astype(float)    
+        with np.errstate(divide='ignore', invalid='ignore'):
+            inv_R = np.where(
+                z == 0, 0.0, 1.0 / (z * (1 + (self.zR / z)**2))
+            )
+
+        waist = self.waist0 * np.sqrt( 1 + (z/self.zR)**2 )
+        gouy_phase = np.exp( 1j * np.arctan( z / self.zR ) )
+        phase_term = np.exp( 1j * self.k0 * r**2 / 2 * inv_R )
+        phase = phase_term * gouy_phase
+        waist_ratio = self.waist0 / waist
+        envelope = np.exp( -1 * (r / waist)**2 )
+        A0 = np.sqrt(
+            4 * Z0 * self.peak_power / np.pi
+        ) / self.waist0
+
+        return  A0 * waist_ratio * envelope * phase
+
+    def field_t(self, r, z, t):
         """ t - time, 1d np array [ps] """
-        E = self.A * ( 
+        E = self.amplitude(r, z) * (
             np.exp( -1 * (t / self.tau)**2 )
             * np.exp( -1j * self.w0 * t )
         )
         return E
 
-    def field_w(self):
-        E = self.Aw * np.exp(
-            -1 * ( self.detuning / self.delta )**2 
+    def field_w(self, r, z):
+        E = (
+            self.amplitude(r, z) / ( self.delta / np.sqrt(2) )
+            * np.exp( -1 * ( self.detuning / self.delta )**2 )
         )
         return E
 
@@ -241,53 +275,51 @@ class Gaussian():
 def chi2_factor(w, n):
     """
     Second-order nonlinear mixing
-    freq : 1d array [rad/ps]
-    k    : 1d array, dispersion relation [rad / m]
+    freq    : 1d array [rad/ps]
+    k       : 1d array, dispersion relation [rad / m]
+    return  : [1/V]
     """
     # CHI2 * w**2 / (c_thz**2 * k)
-    return CHI2 * w / (c_thz * n)                       # [1 / V]
+    return CHI2 * w / (np.sqrt(2*np.pi) * c_thz * n)
         
-def three_photon_loss(Ew, n):
-    Iw = (n * EPS0 * c / 2) * np.abs(Ew)**2             # [W / m^2 * ps^2]
-    return gam3PA * Iw**2                               # []
+def three_photon_abs(gam3PA, A, n):
+    I = (n * EPS0 * c) * np.abs(A)**2
+    return gam3PA * I**2
 
 
 class Chi2_mixing():
     def __init__(
     	self, E_opt, domega, NΩ, 
-    	Dk_up=2*np.pi, Dk_dwn=-2*np.pi, z=0.0
+    	Dk_plus=2*np.pi, Dk_minus=-2*np.pi, z=0.0
     ):
         self.Ew = E_opt
         self.dw = domega
-        self.Dk_up = Dk_up
-        self.Dk_dwn = Dk_dwn
+        self.Dk_plus = Dk_plus
+        self.Dk_minus = Dk_minus
         self.z = z
         self.Nw = len(E_opt)
         self.NΩ = NΩ 
 
-#         if isinstance(Dk_up, np.ndarray):
-#             assert self.Dk_up.shape == (self.Nw, self.NΩ)
-
-    def kernel(self, mode="sum"):
+    def kernel(self, mode="diff"):
         """
-        mode = "sum"    -> K(ω, Ω) = E(ω + Ω)
-        mode = "diff"   -> K(ω, Ω) = E(ω - Ω)
+        mode = "diff"    -> K(ω, Ω) = E(ω + Ω)
+        mode = "sum"   -> K(ω, Ω) = E(ω - Ω)
         """
         K = np.zeros((self.Nw, self.NΩ), dtype=complex)
 
-        if mode == "sum":
+        if mode == "diff":
             for l in range(self.Nw):
                 max_m = min(self.NΩ, self.Nw - l)
                 K[l, :max_m] = self.Ew[l : l + max_m]
 
-            K *= np.exp(-1j * self.z * self.Dk_up)
+            K *= np.exp(1j * self.z * self.Dk_plus)
 
-        elif mode == "diff":
+        elif mode == "sum":
             for l in range(self.Nw):
                 max_m = min(self.NΩ, l + 1)                         # Ω ≤ ω
                 K[l, :max_m] = self.Ew[l::-1][:max_m]
 
-            K *= np.exp(-1j * self.z * self.Dk_dwn)
+            K *= np.exp(1j * self.z * self.Dk_minus)
 
         else:
             raise ValueError("mode must be 'sum' or 'diff'")
@@ -297,17 +329,17 @@ class Chi2_mixing():
     def correlation(self):
         """Integrates K(ω, Ω) with E*(ω) over w"""
         return self.dw * np.sum(
-            self.kernel(mode="sum") 
+            self.kernel(mode="diff") 
             * np.conjugate(self.Ew)[:, None], 
             axis=0
         )
 
     def cascade(self, E_thz):
-        """Integrates K(ω, Ω) with E_THz*(Ω) over Ω"""
-        Kup = self.kernel(mode="sum")
-        Kdwn = self.kernel(mode="diff")
+        """Integrates K(ω, Ω) with E_THz*(Ω) over Ω for diff"""
+        K_plus = self.kernel(mode="diff")
+        K_minus = self.kernel(mode="sum")
 
         return self.dw * (
-            np.sum(Kup * np.conjugate(E_thz[None, :]), axis=1)
-            + np.sum(Kdwn * E_thz[None, :], axis=1)
+            np.sum(K_plus * np.conjugate(E_thz[None, :]), axis=1)
+            + np.sum(K_minus * E_thz[None, :], axis=1)
         )
