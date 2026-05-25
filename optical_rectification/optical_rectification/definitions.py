@@ -202,23 +202,24 @@ class Gaussian():
     """
     def __init__(
     	self, 
-        t_fwhm=75e-3,
-        f0=204, 
-    	r_fwhm=2e-3, 
-        E=181e-6,
-        Nw=2**10
+        duration=75e-3,
+        freq=204, 
+    	waist=2e-3, 
+        energy=181e-6,
+        Nw=2**10,
+        Nr=200
     ):
         """
-        t_fwhm  : FWHM in time [ps]
-        f0      : carrier frequency [THz]
-        r_fwhm  : FWHM of focused dbeam waist [m]
-        E       : pulse energy
+        duration	: FWHM in time [ps]
+        freq		: carrier frequency [THz]
+        waist 		: 1/e of focused dbeam waist [m]
+        energy		: per pulse [J]
         """
         # pulse profile parameters
-        self.tau = t_fwhm / np.sqrt( 2 * np.log(2) )
-        self.delta = 2 / self.tau                                   # 1 / e width in freq.
-        self.w0 = 2 * np.pi * f0                                    # [rad / ps]
-        self.k0 = self.w0 / c_thz                                   # [rad / m]
+        self.tau = duration / np.sqrt( 2 * np.log(2) )
+        self.delta = 2 / self.tau
+        self.w0 = 2 * np.pi * freq
+        self.k0 = self.w0 / c_thz
         self.lam0 = 2*np.pi / self.k0
         self.w = np.linspace(
         			self.w0 - 5.3*np.pi*self.delta,
@@ -227,15 +228,15 @@ class Gaussian():
         )
         self.detuning = self.w0 - self.w
 
-        self.peak_power = E / (
+        self.peak_power = energy / (
             self.tau*1e-12 * np.sqrt(np.pi / 2)
         )                                                           # [W]
 
         # spatial profile parameters
-        self.waist0 = r_fwhm / np.sqrt( 2 * np.log(2)  )
+        # self.waist0 = b0 / np.sqrt( 2 * np.log(2)  )
+        self.waist0 = waist
         self.zR = np.pi * self.waist0**2 / self.lam0
-        # self.A = A
-        # self.Aw = np.sqrt(2)*A / self.delta
+        self.r = np.linspace(0, 3*self.waist0, Nr)
 
     def amplitude(self, r, z):
         z = np.atleast_1d(z).astype(float)    
@@ -256,20 +257,20 @@ class Gaussian():
 
         return  A0 * waist_ratio * envelope * phase
 
-    def field_t(self, r, z, t):
+    def field_t(self, z, t):
         """ t - time, 1d np array [ps] """
-        E = self.amplitude(r, z) * (
+        E = self.amplitude(self.r, z) * (
             np.exp( -1 * (t / self.tau)**2 )
             * np.exp( -1j * self.w0 * t )
         )
         return E
 
-    def field_w(self, r, z):
-        E = (
-            self.amplitude(r, z) / ( self.delta / np.sqrt(2) )
-            * np.exp( -1 * ( self.detuning / self.delta )**2 )
-        )
-        return E
+    def field_w(self, z):
+        A = (
+        	self.amplitude(self.r, z) / (self.delta / np.sqrt(2))
+        )[:, None]                                                  # (Nr, 1)
+        spectral = np.exp(-1 * (self.detuning / self.delta)**2)     # (Nw,)
+        return A * spectral                                         # (Nr, Nw)
 
 
 def chi2_factor(w, n):
@@ -288,6 +289,16 @@ def three_photon_abs(gam3PA, A, n):
 
 
 class Chi2_mixing():
+    """
+    Vectorized second-order nonlinear mixing over a radial grid
+ 
+    Ew      : (Nr, Nw) complex array — optical field at each radial slice
+    domega  : scalar — frequency spacing [rad/ps]
+    NΩ      : int — number of THz frequency points
+    Dk_plus : (Nw, NΩ) array — phase mismatch for E(ω+Ω) branch
+    Dk_minus: (Nw, NΩ) array — phase mismatch for E(ω-Ω) branch
+    z       : scalar — current propagation depth [m]
+    """
     def __init__(
     	self, E_opt, domega, NΩ, 
     	Dk_plus=2*np.pi, Dk_minus=-2*np.pi, z=0.0
@@ -297,49 +308,165 @@ class Chi2_mixing():
         self.Dk_plus = Dk_plus
         self.Dk_minus = Dk_minus
         self.z = z
-        self.Nw = len(E_opt)
-        self.NΩ = NΩ 
+        self.Nr, self.Nw = E_opt.shape
+        self.NΩ = NΩ
 
+        # --- validity masks, shape (Nw, NΩ), computed once at init ---
+        #
+        # For the diff kernel K[i, l, m] = Ew[i, l+m]:
+        #   valid when l + m < Nw
+        #
+        # For the sum kernel K[i, l, m] = Ew[i, l-m]:
+        #   valid when l - m >= 0, i.e. m <= l
+        l_idx = np.arange(self.Nw)[:, None]          # (Nw, 1)
+        m_idx = np.arange(self.NΩ)[None, :]          # (1, NΩ)
+        self.mask_diff = (l_idx + m_idx) < self.Nw   # (Nw, NΩ) True where valid
+        self.mask_sum  = m_idx <= l_idx              # (Nw, NΩ) True where valid
+ 
     def kernel(self, mode="diff"):
         """
-        mode = "diff"    -> K(ω, Ω) = E(ω + Ω)
-        mode = "sum"   -> K(ω, Ω) = E(ω - Ω)
+        Build the full 3D mixing kernel for all radial slices.
+ 
+        Returns K of shape (Nr, Nw, NΩ) where:
+            mode = "diff" -> K[i, l, m] = Ew[i, l+m]   i.e. E(ω + Ω)
+            mode = "sum"  -> K[i, l, m] = Ew[i, l-m]   i.e. E(ω - Ω)
+ 
+        Uses as_strided to build the kernel as a strided view of Ew,
+        with no data copying
         """
-        K = np.zeros((self.Nw, self.NΩ), dtype=complex)
-
+        from numpy.lib.stride_tricks import as_strided
+ 
+        s = self.Ew.itemsize
+ 
         if mode == "diff":
-            for l in range(self.Nw):
-                max_m = min(self.NΩ, self.Nw - l)
-                K[l, :max_m] = self.Ew[l : l + max_m]
-
-            K *= np.exp(1j * self.z * self.Dk_plus)
-
+            # We want K[i, l, m] = Ew[i, l+m].
+            # Strides:
+            #   i -> i+1 : jump Nw elements forward = Nw*s bytes
+            #   l -> l+1 : jump 1 element forward   = s bytes
+            #   m -> m+1 : jump 1 element forward   = s bytes
+            K = as_strided(
+                self.Ew,
+                shape=(self.Nr, self.Nw, self.NΩ),
+                strides=(self.Nw * s, s, s)
+            )
+            # Zero out entries where l+m >= Nw (out of bounds)
+            K = K * self.mask_diff                          # (Nr, Nw, NΩ)
+            K = K * np.exp(1j * self.z * self.Dk_plus)
+ 
         elif mode == "sum":
-            for l in range(self.Nw):
-                max_m = min(self.NΩ, l + 1)                         # Ω ≤ ω
-                K[l, :max_m] = self.Ew[l::-1][:max_m]
-
-            K *= np.exp(1j * self.z * self.Dk_minus)
-
+            # We want K[i, l, m] = Ew[i, l-m].
+            # Strides:
+            #   i -> i+1 : jump Nw elements forward = Nw*s bytes
+            #   l -> l+1 : jump 1 element forward   = s bytes
+            #   m -> m+1 : jump 1 element backward  = -s bytes
+            #
+            # With a negative stride in m, as_strided needs to start reading
+            # from Ew[i, l] for m=0, then step backward. Since the base
+            # pointer of Ew already points to Ew[i=0, l=0], and we step
+            # forward in l by s bytes, K[i, l, 0] = Ew[i, l] as required.
+            K = as_strided(
+                self.Ew,
+                shape=(self.Nr, self.Nw, self.NΩ),
+                strides=(self.Nw * s, s, -s)
+            )
+            K = K * self.mask_sum                           # (Nr, Nw, NΩ)
+            K = K * np.exp(1j * self.z * self.Dk_minus)
+ 
         else:
             raise ValueError("mode must be 'sum' or 'diff'")
-
-        return K
-
+ 
+        return K                                            # (Nr, Nw, NΩ)
+ 
     def correlation(self):
-        """Integrates K(ω, Ω) with E*(ω) over w"""
+        """
+        Computes the OR source term for all radial slices at once:
+ 		C[i, m] = dw * sum_l  Ew[i, l+m] * Ew*[i, l] * exp(i*z*Dk_plus[l, m])
+ 
+        Returns
+        -------
+        result : (Nr, NΩ) complex array
+        """
+        # K shape: (Nr, Nw, NΩ)
+        K = self.kernel(mode="diff")
+ 
+        # np.conj(self.Ew) shape: (Nr, Nw)
+        # We add [:, :, None] to make it (Nr, Nw, 1) so it broadcasts
+        # against K (Nr, Nw, NΩ) along the NΩ axis.
+        # Then sum over l (axis=1) to get (Nr, NΩ).
         return self.dw * np.sum(
-            self.kernel(mode="diff") 
-            * np.conjugate(self.Ew)[:, None], 
-            axis=0
+            K * np.conj(self.Ew)[:, :, None],
+            axis=1
         )
-
-    def cascade(self, E_thz):
-        """Integrates K(ω, Ω) with E_THz*(Ω) over Ω for diff"""
-        K_plus = self.kernel(mode="diff")
-        K_minus = self.kernel(mode="sum")
-
+ 
+    def cascade(self, EΩ):
+        """
+        Computes the cascade back-action on the optical field for all
+        radial slices at once.
+ 
+        (two branches):
+            plus  branch: sum_m  Ew[i, l+m] * EΩ*[i, m] * exp(i*z*Dk_plus[l, m])
+            minus branch: sum_m  Ew[i, l-m] * EΩ[i, m]  * exp(i*z*Dk_minus[l, m])
+ 
+        Parameters
+        ----------
+        EΩ : (Nr, NΩ) complex array — current THz field
+ 
+        Returns
+        -------
+        result : (Nr, Nw) complex array
+        """
+        K_plus  = self.kernel(mode="diff")      # (Nr, Nw, NΩ)
+        K_minus = self.kernel(mode="sum")       # (Nr, Nw, NΩ)
+ 
+        # np.conj(EΩ) shape: (Nr, NΩ)
+        # We add [:, None, :] to make it (Nr, 1, NΩ) so it broadcasts
+        # against K (Nr, Nw, NΩ) along the Nw axis.
+        # Then sum over m (axis=2) to get (Nr, Nw).
         return self.dw * (
-            np.sum(K_plus * np.conjugate(E_thz[None, :]), axis=1)
-            + np.sum(K_minus * E_thz[None, :], axis=1)
+            np.sum(K_plus  * np.conj(EΩ)[:, None, :], axis=2)
+          + np.sum(K_minus * EΩ[:, None, :], axis=2)
         )
+
+    # def kernel(self, mode="diff"):
+    #     """
+    #     mode = "diff"    -> K(ω, Ω) = E(ω + Ω)
+    #     mode = "sum"   -> K(ω, Ω) = E(ω - Ω)
+    #     """
+    #     K = np.zeros((self.Nw, self.NΩ), dtype=complex)
+
+    #     if mode == "diff":
+    #         for l in range(self.Nw):
+    #             max_m = min(self.NΩ, self.Nw - l)
+    #             K[l, :max_m] = self.Ew[l : l + max_m]
+
+    #         K *= np.exp(1j * self.z * self.Dk_plus)
+
+    #     elif mode == "sum":
+    #         for l in range(self.Nw):
+    #             max_m = min(self.NΩ, l + 1)                         # Ω ≤ ω
+    #             K[l, :max_m] = self.Ew[l::-1][:max_m]
+
+    #         K *= np.exp(1j * self.z * self.Dk_minus)
+
+    #     else:
+    #         raise ValueError("mode must be 'sum' or 'diff'")
+
+    #     return K
+
+    # def correlation(self):
+    #     """Integrates K(ω, Ω) with E*(ω) over w"""
+    #     return self.dw * np.sum(
+    #         self.kernel(mode="diff") 
+    #         * np.conjugate(self.Ew)[:, None], 
+    #         axis=0
+    #     )
+
+    # def cascade(self, E_thz):
+    #     """Integrates K(ω, Ω) with E_THz*(Ω) over Ω for diff"""
+    #     K_plus = self.kernel(mode="diff")
+    #     K_minus = self.kernel(mode="sum")
+
+    #     return self.dw * (
+    #         np.sum(K_plus * np.conjugate(E_thz[None, :]), axis=1)
+    #         + np.sum(K_minus * E_thz[None, :], axis=1)
+    #     )

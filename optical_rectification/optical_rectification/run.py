@@ -22,5 +22,4 @@ def or_simulation(model: ORPropagator):
         "EΩ": EΩf,
         "sol": sol,
         "model": model
-        # "pulse": pulse
     }
