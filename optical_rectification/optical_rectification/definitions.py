@@ -204,7 +204,7 @@ class Gaussian():
     	self, 
         duration=75e-3,
         freq=204, 
-    	waist=2e-3, 
+    	waist=1.699e-3, 
         energy=181e-6,
         Nw=2**10,
         Nr=200
