@@ -1,37 +1,44 @@
 # propagator.py
-from numpy import arange, floor, linspace, zeros_like, concatenate, pi
+from numpy import arange, floor, linspace, zeros, concatenate, pi
 from . import par
-from .definitions import three_photon_abs, chi2_factor, Chi2_mixing, \
+from .definitions import Gaussian, three_photon_abs, chi2_factor, Chi2_mixing, \
 Dispersion, Index, DEPTH
 
 class ORPropagator:
-    def __init__(self, t_fwhm, f0, U, gam3PA, Ω_max=2*pi*10, cascade=True):
+    def __init__(self, 
+        t_fwhm, f0, U, b0, 
+        gam3PA=0, Ω_max=2*pi*10, Nw=2**10, cascade=True
+        ):
         """
         Parameters
         ----------
         t_fwhm      : pulse duration [ps]
         f0          : pulse carrier frequency [THz]
         U           : pulse energy
+        b0          : beam waist at 1/e [m]
         gam3PA      : three-photon absorption coefficient [m^3/W^2]
         """
-        self.pulse = Gaussian(duration=t_fwhm, freq=f0, energy=U)
-        self.dw = abs(self.pulse.w[1] - pulse.w[0])
+        self.pulse = Gaussian(
+            duration=t_fwhm, freq=f0, waist=b0, energy=U, Nw=Nw
+        )
+        self.dw = abs(self.pulse.w[1] - self.pulse.w[0])
         self.m_dps = int(floor(Ω_max / self.dw))
-        self.Ω = arange(self.m_dps + 1) * self.dw
-        self.NΩ = len(self.Ω)
-        self.Nw = len(pulse.w)
+        self.NΩ = self.m_dps + 1
+        self.Ω = arange(self.NΩ) * self.dw
+        self.Nw = Nw
+        self.Nr = self.pulse.r.shape[0]
 
         # --- spectral / material properties ---
-        self.index_w = Index(pulse.w, param=par.p2, s=par.s2)
+        self.index_w = Index(self.pulse.w, param=par.p2, s=par.s2)
         self.index_Ω = Index(self.Ω)
 
         self.dispersion = Dispersion(
-            pulse.w0, pulse.w, self.index_w.sellmeier(), 
+            self.pulse.w0, self.pulse.w, self.index_w.sellmeier(), 
             Ω=self.Ω, n_Ω=self.index_Ω.n()
         )
 
-        self.pref_w = chi2_factor(pulse.w, self.index_w.sellmeier())  # (Nw,)
-        self.pref_Ω = chi2_factor(self.Ω, self.index_Ω.n())           # (NΩ,)
+        self.pref_w = chi2_factor(self.pulse.w, self.index_w.sellmeier())  # (Nw,)
+        self.pref_Ω = chi2_factor(self.Ω, self.index_Ω.n())                # (NΩ,)
         self.pref_Ω[0] = 0.0
 
         self.cascade = cascade
@@ -40,10 +47,9 @@ class ORPropagator:
         # --- transverse direction initial conditions ---
         # pulse.field_w(r, z) returns 
         # amplitude(r,z) * spectral_envelope(w)
-        self.Ew0 = self.pulse.field_w(self.r[:, None], 0)             # (Nr, Nw)
-        self.EΩ0 = zeros((Nr, self.NΩ), dtype=complex)                # (Nr, NΩ)
-        A_r = self.pulse.amplitude(self.r, 0)                         # (Nr,)
-        self.tpa = three_photon_abs(gam3PA, A_r, 1)                   # (Nr,)
+        self.Ew0 = self.pulse.field_w()                                  # (Nr, Nw)
+        self.EΩ0 = zeros((self.Nr, self.NΩ), dtype=complex)              # (Nr, NΩ)
+        self.tpa = three_photon_abs(gam3PA, self.Ew0, 1)                 # (Nr, Nw)
 
     def pack(self, Ew, EΩ):
         """
@@ -81,6 +87,7 @@ class ORPropagator:
             -0.5 * self.index_Ω.alpha() * EΩ
             +0.5j * self.pref_Ω * chi2.correlation()
         )
+
         # --- optical field ode ---
         dEw = (
             -0.5 * ( self.index_w.alpha() + self.tpa )

@@ -207,7 +207,7 @@ class Gaussian():
     	waist=1.699e-3, 
         energy=181e-6,
         Nw=2**10,
-        Nr=200
+        Nr=50
     ):
         """
         duration	: FWHM in time [ps]
@@ -222,8 +222,8 @@ class Gaussian():
         self.k0 = self.w0 / c_thz
         self.lam0 = 2*np.pi / self.k0
         self.w = np.linspace(
-        			self.w0 - 5.3*np.pi*self.delta,
-        			self.w0 + 3.5*np.pi*self.delta,
+        			self.w0 - 3.0*np.pi*self.delta,
+        			self.w0 + 2.5*np.pi*self.delta,
         			Nw
         )
         self.detuning = self.w0 - self.w
@@ -236,9 +236,10 @@ class Gaussian():
         # self.waist0 = b0 / np.sqrt( 2 * np.log(2)  )
         self.waist0 = waist
         self.zR = np.pi * self.waist0**2 / self.lam0
-        self.r = np.linspace(0, 3*self.waist0, Nr)
+        self.r = np.linspace(0, 1.7*self.waist0, Nr)
 
-    def amplitude(self, r, z):
+    def amplitude(self, r=None, z=0):
+        r = self.r if r is None else r
         z = np.atleast_1d(z).astype(float)    
         with np.errstate(divide='ignore', invalid='ignore'):
             inv_R = np.where(
@@ -257,17 +258,17 @@ class Gaussian():
 
         return  A0 * waist_ratio * envelope * phase
 
-    def field_t(self, z, t):
+    def field_t(self, t):
         """ t - time, 1d np array [ps] """
-        E = self.amplitude(self.r, z) * (
+        E = self.amplitude() * (
             np.exp( -1 * (t / self.tau)**2 )
             * np.exp( -1j * self.w0 * t )
         )
         return E
 
-    def field_w(self, z):
+    def field_w(self):
         A = (
-        	self.amplitude(self.r, z) / (self.delta / np.sqrt(2))
+        	self.amplitude() / (self.delta / np.sqrt(2))
         )[:, None]                                                  # (Nr, 1)
         spectral = np.exp(-1 * (self.detuning / self.delta)**2)     # (Nw,)
         return A * spectral                                         # (Nr, Nw)
@@ -284,7 +285,7 @@ def chi2_factor(w, n):
     return CHI2 * w / (np.sqrt(2*np.pi) * c_thz * n)
         
 def three_photon_abs(gam3PA, A, n):
-    I = (n * EPS0 * c) * np.abs(A)**2
+    I = n/(2*Z0) * np.abs(A)**2
     return gam3PA * I**2
 
 
@@ -335,7 +336,6 @@ class Chi2_mixing():
         with no data copying
         """
         from numpy.lib.stride_tricks import as_strided
- 
         s = self.Ew.itemsize
  
         if mode == "diff":
@@ -350,7 +350,7 @@ class Chi2_mixing():
                 strides=(self.Nw * s, s, s)
             )
             # Zero out entries where l+m >= Nw (out of bounds)
-            K = K * self.mask_diff                          # (Nr, Nw, NΩ)
+            K = np.where(self.mask_diff, K, 0.0)                    # (Nr, Nw, NΩ)
             K = K * np.exp(1j * self.z * self.Dk_plus)
  
         elif mode == "sum":
@@ -369,13 +369,13 @@ class Chi2_mixing():
                 shape=(self.Nr, self.Nw, self.NΩ),
                 strides=(self.Nw * s, s, -s)
             )
-            K = K * self.mask_sum                           # (Nr, Nw, NΩ)
+            K = np.where(self.mask_sum, K, 0.0)
             K = K * np.exp(1j * self.z * self.Dk_minus)
  
         else:
             raise ValueError("mode must be 'sum' or 'diff'")
  
-        return K                                            # (Nr, Nw, NΩ)
+        return K
  
     def correlation(self):
         """
@@ -426,47 +426,3 @@ class Chi2_mixing():
             np.sum(K_plus  * np.conj(EΩ)[:, None, :], axis=2)
           + np.sum(K_minus * EΩ[:, None, :], axis=2)
         )
-
-    # def kernel(self, mode="diff"):
-    #     """
-    #     mode = "diff"    -> K(ω, Ω) = E(ω + Ω)
-    #     mode = "sum"   -> K(ω, Ω) = E(ω - Ω)
-    #     """
-    #     K = np.zeros((self.Nw, self.NΩ), dtype=complex)
-
-    #     if mode == "diff":
-    #         for l in range(self.Nw):
-    #             max_m = min(self.NΩ, self.Nw - l)
-    #             K[l, :max_m] = self.Ew[l : l + max_m]
-
-    #         K *= np.exp(1j * self.z * self.Dk_plus)
-
-    #     elif mode == "sum":
-    #         for l in range(self.Nw):
-    #             max_m = min(self.NΩ, l + 1)                         # Ω ≤ ω
-    #             K[l, :max_m] = self.Ew[l::-1][:max_m]
-
-    #         K *= np.exp(1j * self.z * self.Dk_minus)
-
-    #     else:
-    #         raise ValueError("mode must be 'sum' or 'diff'")
-
-    #     return K
-
-    # def correlation(self):
-    #     """Integrates K(ω, Ω) with E*(ω) over w"""
-    #     return self.dw * np.sum(
-    #         self.kernel(mode="diff") 
-    #         * np.conjugate(self.Ew)[:, None], 
-    #         axis=0
-    #     )
-
-    # def cascade(self, E_thz):
-    #     """Integrates K(ω, Ω) with E_THz*(Ω) over Ω for diff"""
-    #     K_plus = self.kernel(mode="diff")
-    #     K_minus = self.kernel(mode="sum")
-
-    #     return self.dw * (
-    #         np.sum(K_plus * np.conjugate(E_thz[None, :]), axis=1)
-    #         + np.sum(K_minus * E_thz[None, :], axis=1)
-    #     )
