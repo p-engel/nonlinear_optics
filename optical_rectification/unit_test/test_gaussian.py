@@ -32,10 +32,11 @@ def test_gaussian_amplitude():
 def test_gaussian():
     try:
         pulse = Gaussian()
-        E_w = pulse.field_w(0)
-        E_peak = pulse.amplitude(0,0) / ( pulse.delta / np.sqrt(2) )
+        E_w = pulse.field_w()
+        E_peak = pulse.amplitude()[0] / ( pulse.delta / np.sqrt(2) )
         I_peak = np.abs(E_peak)**2 / (2*Z0)
         I_w = np.abs(E_w)**2 / (2*Z0)
+        Pw = ( np.pi * pulse.waist0**2 / 2 ) * I_w[0,:]
 
         ind_fwhm = abs(1/2 - I_w[0, :]/I_peak) < 1.2e-2
         w_fwhm = abs( 
@@ -47,7 +48,7 @@ def test_gaussian():
         t_fwhm = pulse.tau * np.sqrt( 2 * np.log(2) )
         print(
             "The bandwith (FWHM) is ", w_fwhm/(2 * np.pi),
-            " [THz]." 
+            " [THz]."
         )
         print(
             "The bandwith (FWHM) is ", w_fwhm_expected,
@@ -59,6 +60,10 @@ def test_gaussian():
         assert cond, (
             "The pulse doesn't satisfy the time-bandwith product"
         )
+        cond = np.isclose(
+            max(pulse.power_spectrum(E_w)), max(Pw), rtol=1e-2, atol=0
+        )
+        assert cond, (f"ValueError with power_spectrum function")
 
     except AssertionError as a:
         print(f'Assertion error: {a}')
@@ -111,15 +116,15 @@ plt.show()
 fig, ax = plt.subplots(figsize=(6.4, 4.8))
 w, E_w, I_w = test_gaussian()
 # lam = c * 2*np.pi / (w * 1e12) * 1e9
-Pw = ( np.pi * g.waist0**2 / 2 ) * I_w * 1e-6
-ax.plot(w/(2*np.pi), abs(E_w[50, :])*1e-7, 'r')
+# Pw = ( np.pi * g.waist0**2 / 2 ) * I_w[0,:] * 1e-6
+ax.plot(w/(2*np.pi), abs(E_w[49,:])*1e-7, 'r')
 ax.set_title("Gaussian Pulse")
 ax.set_xlabel(r"$\nu \quad [THz]$")
 ax.set_ylabel(r"$|E| \times 10^{7} \quad [V/m\cdot ps]$")
 ax.set_ylim(0,3)
 ax.tick_params(axis='y', labelcolor='r')
 ax1 = ax.twinx()
-ax1.plot(w/(2*np.pi), Pw[0, :], 'k')
+ax1.plot(w/(2*np.pi), g.power_spectrum(E_w) * 1e-6, 'k')
 ax1.set_ylim(0,5)
 ax1.set_ylabel(r"$P \quad [MW \cdot ps^2]$")
 ax1.tick_params(axis='y',labelcolor='k')

@@ -237,6 +237,7 @@ class Gaussian():
         self.waist0 = waist
         self.zR = np.pi * self.waist0**2 / self.lam0
         self.r = np.linspace(0, 1.7*self.waist0, Nr)
+        self.Nr = Nr
 
     def amplitude(self, r=None, z=0):
         r = self.r if r is None else r
@@ -273,6 +274,29 @@ class Gaussian():
         spectral = np.exp(-1 * (self.detuning / self.delta)**2)     # (Nw,)
         return A * spectral                                         # (Nr, Nw)
 
+    def intensity(self, field_amplitude, n):
+        """
+        Calculate average intensity
+        """
+        return  n / (2*Z0) * np.abs( field_amplitude )**2
+
+    def power_spectrum(self, field_w, n=1):
+        if field_w.ndim != 2:
+            raise ValueError(f"expected 2D array (R, w), got {field_w.ndim}D")
+        if field_w.shape[0] != self.Nr:
+            raise ValueError(f"first dimension should have R components")
+        dr = np.abs( self.r[0] - self.r[1] )
+        dEr = np.abs( field_w[0, 0] - field_w[1, 0] )
+        if np.abs( dEr / dr ) > 0.1:
+            raise ValueError(f"the radial grid spacing is large, the slope of "
+            f"E(r) is {dEr/dr}"
+            )
+
+        return 2*np.pi * dr * np.sum( 
+                self.r[:, None] * self.intensity(field_w, n),
+                axis=0 
+        )
+
 
 def chi2_factor(w, n):
     """
@@ -283,7 +307,7 @@ def chi2_factor(w, n):
     """
     # CHI2 * w**2 / (c_thz**2 * k)
     return CHI2 * w / (np.sqrt(2*np.pi) * c_thz * n)
-        
+
 def three_photon_abs(gam3PA, A, n):
     I = n/(2*Z0) * np.abs(A)**2
     return gam3PA * I**2
