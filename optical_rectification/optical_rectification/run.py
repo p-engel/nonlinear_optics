@@ -1,7 +1,18 @@
+from numpy import ndarray
 from scipy.integrate import solve_ivp
 from .propagator import ORPropagator
+from typing import TypedDict, Any
+from dataclasses import dataclass
 
-def or_simulation(model: ORPropagator):
+@dataclass
+class ORSimResult:
+    z: ndarray
+    Ew: ndarray
+    EΩ: ndarray
+    sol: Any
+    model: ORPropagator
+
+def or_simulation(model: ORPropagator) -> ORSimResult:
     # --- propagation ---
     y0 = model.pack(model.Ew0, model.EΩ0)
 
@@ -16,10 +27,10 @@ def or_simulation(model: ORPropagator):
 
     Ewf, EΩf = model.unpack(sol.y[:, -1])
 
-    return {
-        "z": sol.t,
-        "Ew": Ewf,
-        "EΩ": EΩf,
-        "sol": sol,
-        "model": model
-    }
+    return ORSimResult(
+    z=sol.t,
+    Ew=Ewf,
+    EΩ=EΩf,
+    sol=sol,
+    model=model
+    )
