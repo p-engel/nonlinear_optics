@@ -228,6 +228,7 @@ class Gaussian():
         )
         self.detuning = self.w0 - self.w
 
+        self.energy = energy
         self.peak_power = energy / (
             self.tau*1e-12 * np.sqrt(np.pi / 2)
         )                                                           # [W]

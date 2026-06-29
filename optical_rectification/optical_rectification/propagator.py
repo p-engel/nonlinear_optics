@@ -5,8 +5,8 @@ from .definitions import Gaussian, three_photon_abs, chi2_factor, Chi2_mixing, \
 Dispersion, Index, DEPTH
 
 class ORPropagator:
-    def __init__(self, 
-        t_fwhm, f0, U, b0, 
+    def __init__(self, *, 
+        t_fwhm, b0, f0, U, 
         gam3PA=0, Ω_max=2*pi*10, Nw=2**10, cascade=True
         ):
         """
