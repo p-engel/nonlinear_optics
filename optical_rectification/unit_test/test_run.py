@@ -6,7 +6,7 @@ from optical_rectification.definitions import Gaussian
 
 def test_sweep():
     try:
-        conv_efficiency = run.sweep()
+        conv_efficiency = run.sweep(mode=True)
         assert isinstance(conv_efficiency, ndarray), (
             f"expected sweep output as array of conversion efficiencies"
         )
