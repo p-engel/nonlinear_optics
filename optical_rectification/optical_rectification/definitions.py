@@ -1,6 +1,5 @@
 import numpy as np
 import os
-import pandas as pd
 
 from optical_rectification import par
 """
