@@ -12,8 +12,6 @@ cd nonlinear_optics/optical_rectification
 pip install -e .
 ```
 
-[`analysis.ipynb`](analysis.ipynb) is the entry point and runs the full interface in three calls:
-
 ```python
 from optical_rectification import propagator, run, graphs
 
