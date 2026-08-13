@@ -2,7 +2,7 @@
 
 A modular Python solver for nonlinear ultrashort-pulse propagation, used here to model terahertz generation by optical rectification. The solver integrates coupled spectral-domain envelope equations through a dispersive, absorbing nonlinear medium and reports how material dispersion and device geometry set the pump-to-THz conversion efficiency.
 
-**Objective.** Predict how material dispersion, absorption, and pump geometry set the THz conversion efficiency in DSTMS. The model is quasi-3D and includes cascaded optical rectification and three-photon absorption of the near-infrared pump.
+**Objective.** Predict how material dispersion, absorption, and pump geometry set the THz conversion efficiency in DSTMS. The model is quasi-3D and includes cascaded optical rectification and three-photon absorption of the near-infrared optical Gaussian pump.
 
 ## Install and run
 
