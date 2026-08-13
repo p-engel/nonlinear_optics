@@ -34,7 +34,10 @@ graphs.ORgraphs(result).spectral_intensity()
 <p align="center"> <img src="data/thz_spectrum.png" alt="Simulated THz
   spectrum at peak fluence, 0-15 THz" width="720"> </p>
 
-*Output of the snippet above: THz spectrum generated in DSTMS from a 35 fs, 181 µJ pump at 1425 nm. The full four-panel figure, including the radially resolved spectra and the depleted pump, is in [`analysis.ipynb`](analysis.ipynb).*
+*Output of the snippet above: THz spectrum generated in DSTMS from a
+ 35 fs, 181 µJ Gaussian pump at 1425 nm. The full four-panel figure,
+ including the radially resolved spectra and the depleted pump, is in
+ [`analysis.ipynb`](analysis.ipynb).*
 
 The terahertz conversion efficiency is defined as
 
@@ -49,12 +52,17 @@ The terahertz conversion efficiency is defined as
 \end{equation}
 ```
 
-where the quantity inside $[\,]$ is the power spectrum of the generated terahertz field, and $U$ is the energy of the input pulse.
+where the quantity inside $[\,]$ is the power spectrum of the
+generated terahertz field, and $U$ is the energy of the input Gaussian
+pulse.
 
 <p align="center"> <img src="data/thz_conversion.png" alt="THz
   conversion efficiency, 0-15 THz" width="720"> </p>
 
-*Output of the snippet above: THz conversion efficiency (with Cascade effects turned on) from a 35 fs, 181 µJ pump at various carrier frequency. The complete analysis is in [`analysis.ipynb`](analysis.ipynb).*
+*Output of the snippet above: THz conversion efficiency (with pump
+ depletion due to Cascade effects turned on) from a 35 fs, 181 µJ pump
+ at various carrier frequency. The complete analysis is in
+ [`analysis.ipynb`](analysis.ipynb).*
 
 ## Module map
 
