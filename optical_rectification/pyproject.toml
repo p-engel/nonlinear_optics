@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "optical-rectification"
+version = "0.1.0"
+description = "Modular solver for nonlinear ultrashort-pulse propagation and terahertz generation by optical rectification"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "P. Engel" }]
+
+# TODO: replace with the actual contents of ../requirements.txt
+dependencies = [
+    "numpy",
+    "scipy",
+    "matplotlib",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "jupyter"]
+
+[tool.setuptools]
+packages = ["optical_rectification"]
+
+[tool.pytest.ini_options]
+testpaths = ["unit_test"]
