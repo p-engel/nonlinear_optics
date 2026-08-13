@@ -31,9 +31,8 @@ result = run.or_simulation(model)   # -> ORSimResult
 graphs.ORgraphs(result).spectral_intensity()
 ```
 
-<p align="center">
-  <img src="docs/thz_spectrum.png" alt="Simulated THz spectrum at peak fluence, 0-15 THz" width="720">
-</p>
+<p align="center"> <img src="data/thz_spectrum.png" alt="Simulated THz
+  spectrum at peak fluence, 0-15 THz" width="720"> </p>
 
 *Output of the snippet above: THz spectrum generated in DSTMS from a 35 fs, 181 µJ pump at 1425 nm. The full four-panel figure, including the radially resolved spectra and the depleted pump, is in [`analysis.ipynb`](analysis.ipynb).*
 
