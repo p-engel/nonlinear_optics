@@ -36,6 +36,26 @@ graphs.ORgraphs(result).spectral_intensity()
 
 *Output of the snippet above: THz spectrum generated in DSTMS from a 35 fs, 181 µJ pump at 1425 nm. The full four-panel figure, including the radially resolved spectra and the depleted pump, is in [`analysis.ipynb`](analysis.ipynb).*
 
+The terahertz conversion efficiency is defined as
+
+```math
+\begin{equation}
+    \eta = \frac{
+        \int_0^{\infty} {\rm d}\Omega 
+           \left[ \frac{1}{2Z_0} \int_0^{\infty} {\rm d}r\, r\, \vert E_{\rm Thz}(r, \Omega, z)\vert^2 \right]
+    }{
+        U
+    }
+\end{equation}
+```
+
+where the quantity inside $[\,]$ is the power spectrum of the generated terahertz field, and $U$ is the energy of the input pulse.
+
+<p align="center"> <img src="data/thz_conversion.png" alt="THz
+  conversion efficiency, 0-15 THz" width="720"> </p>
+
+*Output of the snippet above: THz conversion efficiency (with Cascade effects turned on) from a 35 fs, 181 µJ pump at various carrier frequency. The complete analysis is in [`analysis.ipynb`](analysis.ipynb).*
+
 ## Module map
 
 All modules live in `optical_rectification/optical_rectification/`.
